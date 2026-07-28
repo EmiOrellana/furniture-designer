@@ -15,6 +15,7 @@ optimized cut lists, weight & cost estimates, and dimensioned technical drawings
 [![Tests](https://img.shields.io/badge/tests-28%20passing-3FB27F)](#-testing)
 [![Bundle](https://img.shields.io/badge/build-single%20HTML%20file-F07B26)](#-single-file-distribution)
 [![i18n](https://img.shields.io/badge/languages-ES%20%7C%20EN-4C9EEB)](#-internationalization)
+[![License](https://img.shields.io/badge/license-GPL--3.0-A2A8B0)](LICENSE)
 
 <img src="landing/assets/hero.png" alt="FerroMadera viewport showing a parametric table and shelving unit" width="850">
 
@@ -264,10 +265,14 @@ migrated automatically — mesh scale factors are baked into real parameters.
 
 ## 📄 License
 
-© 2026 Emilio Orellana. All rights reserved.
+[GNU General Public License v3.0](LICENSE) — © 2026 Emilio Orellana.
 
-The source is published for portfolio evaluation. Commercial use, redistribution
-or resale require written permission from the author.
+You are free to use, study, modify and share this software. If you distribute it
+or a derivative — including hosting it, since the whole application is delivered
+to the browser — you must do so under the GPL v3 and make the source available.
+
+Third-party components keep their own licenses: [Three.js](https://github.com/mrdoob/three.js)
+and [jsPDF](https://github.com/parallax/jsPDF) are MIT.
 
 ---
 
