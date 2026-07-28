@@ -1,0 +1,15 @@
+{
+  "name": "ferromadera",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Diseñador 3D de muebles de hierro y madera: landing + aplicación.",
+  "scripts": {
+    "build": "npm --prefix app ci && npm --prefix app run build && node scripts/assemble.mjs",
+    "preview": "npm --prefix app run build && node scripts/assemble.mjs && python -m http.server 4000 --directory dist",
+    "dev": "npm --prefix app run dev",
+    "test": "npm --prefix app test",
+    "serve:landing": "python -m http.server 4173 --directory landing",
+    "serve:dist": "python -m http.server 4000 --directory dist"
+  }
+}

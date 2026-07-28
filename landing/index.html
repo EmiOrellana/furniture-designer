@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PLACEHOLDERS A REEMPLAZAR
+     · Nombre de la app: aparece en la barra superior y en el pie
+       (.brand-name), y en el título traducible (js/i18n.js → meta.title).
+     · Logo: assets/logo.svg (reemplazá el archivo, no hace falta tocar HTML).
+     · Link de donación: buscar "DONACION_URL" más abajo.
+     · La app se publica en /app — si cambia la ruta, buscar href="/app".
+
+     TEXTOS: los visibles se traducen desde js/i18n.js mediante los
+     atributos data-i18n / data-i18n-html / data-i18n-alt / data-i18n-label.
+     El texto escrito en el HTML es el de respaldo (español) si falla el JS.
+     ═══════════════════════════════════════════════════════════════ -->
+
+<title>FerroMadera — Diseñador 3D de muebles de hierro y madera</title>
+<meta name="description" content="Diseñá muebles de hierro y madera en 3D desde el navegador y obtené la lista de cortes optimizada, el peso, el costo y los planos acotados en PDF. Gratis y sin instalar nada.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="FerroMadera — Diseñador 3D de muebles de hierro y madera">
+<meta property="og:description" content="Del diseño 3D a la lista de cortes, el peso, el costo y los planos en PDF. Gratis, en el navegador.">
+<meta property="og:image" content="assets/hero.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/sections.css">
+</head>
+<body>
+
+<script>
+/* Mejora progresiva. Los bloques .reveal solo se ocultan si el JS va a poder
+   mostrarlos después. Abierto con doble clic (file://) el navegador bloquea
+   los módulos ES, así que no marcamos nada y la página se ve completa.
+   El temporizador cubre cualquier otro fallo de carga del script. */
+(function () {
+  if (location.protocol === 'file:') return;
+  var el = document.documentElement;
+  el.classList.add('js');
+  setTimeout(function () {
+    if (!window.__landingReady) el.classList.remove('js');
+  }, 1500);
+})();
+</script>
+
+<!-- ═══ Iconos (trazo 2px, 24×24) ═══ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1l3.4 3.4"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M3 8l4-4 4 4M3 8a4 4 0 0 0 8 0M13 8l4-4 4 4M13 8a4 4 0 0 0 8 0M4 4h16"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2.5 21 7v10l-9 4.5L3 17V7l9-4.5z"/><path d="M3 7l9 4.5L21 7M12 11.5v10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 11h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 2v3M12 2v3"/></symbol>
+</defs></svg>
+
+<!-- ═══ BARRA SUPERIOR ═══ -->
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" data-i18n-label="nav.home" aria-label="Inicio">
+      <img class="brand-mark" src="assets/logo.svg" alt="" width="32" height="32">
+      <span class="brand-name">FerroMadera</span>
+    </a>
+
+    <nav class="nav-links" data-i18n-label="nav.sections" aria-label="Secciones">
+      <a href="#funciones" data-i18n="nav.features">Funciones</a>
+      <a href="#pasos" data-i18n="nav.how">Cómo funciona</a>
+      <a href="#preguntas" data-i18n="nav.faq">Preguntas</a>
+    </nav>
+
+    <!-- Selector de idioma: las banderas son archivos sueltos en assets/,
+         se pueden reemplazar sin tocar el código. -->
+    <div class="lang-switch" role="group" data-i18n-label="lang.group" aria-label="Idioma">
+      <button class="lang-btn" data-lang="es" data-i18n-label="lang.es" aria-label="Español" aria-pressed="true">
+        <img src="assets/flag-es.svg" alt="" width="20" height="14">
+      </button>
+      <button class="lang-btn" data-lang="en" data-i18n-label="lang.en" aria-label="Inglés" aria-pressed="false">
+        <img src="assets/flag-en.svg" alt="" width="20" height="14">
+      </button>
+    </div>
+
+    <a class="btn btn-primary" href="/app" data-i18n="cta.start">Empezar</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <div class="container">
+      <h1 data-i18n="hero.title">Diseñador 3D de muebles de hierro y madera.</h1>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/app">
+          <span data-i18n="cta.start">Empezar</span>
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+        </a>
+        <a class="btn btn-ghost btn-lg" href="#funciones" data-i18n="hero.see">Ver qué genera</a>
+      </div>
+      <div class="frame hero-shot reveal">
+        <img src="assets/hero.png" width="1920" height="1080" fetchpriority="high"
+             data-i18n-alt="hero.alt"
+             alt="Vista 3D de una mesa y una estantería de caño estructural con tapa de madera, diseñadas en la app.">
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ QUÉ HACE ═══ -->
+  <section class="section" id="que-hace">
+    <div class="container container-narrow">
+      <div class="section-head reveal">
+        <span class="eyebrow" data-i18n="what.eyebrow">Qué hace</span>
+        <h2 data-i18n="what.title">Del modelo 3D a los datos de fabricación.</h2>
+        <p data-i18n="what.intro">
+          Elegís perfiles comerciales reales —caño cuadrado, rectangular o redondo,
+          ángulo, planchuela y placa de madera—, los armás en 3D con las medidas que
+          quieras, y la app calcula sola todo lo que necesitás para construirlo.
+        </p>
+      </div>
+      <ul class="what-list">
+        <li class="what-item reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+          <p data-i18n-html="what.1"><strong>Cada pieza guarda sus medidas de fabricación</strong> —perfil, espesor de pared y largo de corte—, no una figura aproximada.</p>
+        </li>
+        <li class="what-item reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+          <p data-i18n-html="what.2"><strong>Movés, rotás y medís con precisión</strong>, con ajuste a grilla y a 15°. Nada está atado a una plantilla: el mueble es tuyo.</p>
+        </li>
+        <li class="what-item reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+          <p data-i18n-html="what.3"><strong>Todo se recalcula al instante</strong>: cambiás una medida y la lista de cortes, el peso, el costo y los planos se actualizan solos.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ FUNCIONES ═══ -->
+  <section class="section" id="funciones">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow" data-i18n="feat.eyebrow">Funciones</span>
+        <h2 data-i18n="feat.title">Lo que te llevás al taller.</h2>
+      </div>
+
+      <!-- 1 · Cortes -->
+      <article class="feature">
+        <div class="feature-text reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-scissors"/></svg></div>
+          <h3 data-i18n="f1.title">Optimización de cortes</h3>
+          <p data-i18n="f1.body">
+            La app distribuye todos los cortes en barras comerciales y te dice cuántas
+            comprar y cómo cortar cada una. Configurás el largo de la barra y el
+            espesor de corte, y ves el sobrante de cada tira y el aprovechamiento real.
+          </p>
+          <div class="feature-tags">
+            <span class="tag" data-i18n="f1.t1">largo de barra</span>
+            <span class="tag" data-i18n="f1.t2">kerf</span>
+            <span class="tag" data-i18n="f1.t3">sobrantes</span>
+            <span class="tag" data-i18n="f1.t4">% aprovechamiento</span>
+          </div>
+        </div>
+        <div class="feature-media reveal">
+          <div class="frame frame-doc frame-crop">
+            <img src="assets/bom-pdf.png" width="952" height="1348" loading="lazy"
+                 data-i18n-alt="f1.alt"
+                 alt="Lista de materiales con cortes por barra, pesos y costos.">
+          </div>
+        </div>
+      </article>
+
+      <!-- 2 · Peso y costo -->
+      <article class="feature">
+        <div class="feature-text reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-scale"/></svg></div>
+          <h3 data-i18n="f2.title">Peso y costo reales</h3>
+          <p data-i18n="f2.body">
+            El peso se calcula con la sección real del perfil, descontando el hueco del
+            caño: no es una estimación gruesa. Cargás el precio del metro o del m² y
+            tenés el costo del material antes de comprarlo.
+          </p>
+          <div class="feature-tags">
+            <span class="tag" data-i18n="f2.t1">kg por pieza</span>
+            <span class="tag" data-i18n="f2.t2">kg por perfil</span>
+            <span class="tag" data-i18n="f2.t3">costo estimado</span>
+          </div>
+        </div>
+        <div class="feature-media reveal">
+          <div class="data-card" aria-hidden="true">
+            <div class="data-card-head">
+              <span data-i18n="f2.d1">Caño cuadrado 30×30×1.6</span>
+              <span data-i18n="f2.d2">8 piezas</span>
+            </div>
+            <div class="data-row"><span data-i18n="f2.d3">Pata #1 – #4</span><span>725 mm</span></div>
+            <div class="data-row"><span data-i18n="f2.d4">Refuerzo frontal #1 – #2</span><span>1140 mm</span></div>
+            <div class="data-row"><span data-i18n="f2.d5">Refuerzo lateral #1 – #2</span><span>540 mm</span></div>
+            <div class="data-total"><span>6.26 m · 8.93 kg</span><span>$32.55</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3 · Planos -->
+      <article class="feature">
+        <div class="feature-text reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></div>
+          <h3 data-i18n="f3.title">Planos técnicos en PDF</h3>
+          <p data-i18n="f3.body">
+            Tres vistas ortográficas —frontal, lateral y superior— con las cotas
+            generales del conjunto, más el resumen de materiales. Listo para imprimir
+            y colgar al lado de la mesa de trabajo.
+          </p>
+          <div class="feature-tags">
+            <span class="tag" data-i18n="f3.t1">vistas acotadas</span>
+            <span class="tag" data-i18n="f3.t2">A4 apaisado</span>
+            <span class="tag" data-i18n="f3.t3">imágenes PNG por vista</span>
+          </div>
+        </div>
+        <div class="feature-media reveal">
+          <div class="frame frame-doc">
+            <img src="assets/plans-pdf.png" width="1347" height="952" loading="lazy"
+                 data-i18n-alt="f3.alt"
+                 alt="Plano técnico con vista frontal y lateral acotadas en milímetros.">
+          </div>
+        </div>
+      </article>
+
+      <!-- 4 · Diseño y export -->
+      <article class="feature">
+        <div class="feature-text reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-cube"/></svg></div>
+          <h3 data-i18n="f4.title">Plantillas y exportación 3D</h3>
+          <p data-i18n="f4.body">
+            Arrancá con una mesa o una estantería completas a partir de unas pocas
+            medidas, y después modificá lo que quieras. Cuando lo tengas listo,
+            exportalo a Blender o a tu CAD para renderizarlo o seguir trabajándolo.
+          </p>
+          <div class="feature-tags">
+            <span class="tag">.glb</span>
+            <span class="tag">.obj</span>
+            <span class="tag" data-i18n="f4.t3">proyecto .fmd</span>
+          </div>
+        </div>
+        <div class="feature-media reveal">
+          <div class="frame">
+            <img src="assets/hero.png" width="1920" height="1080" loading="lazy"
+                 data-i18n-alt="f4.alt"
+                 alt="Mesa y estantería generadas desde plantillas y ajustadas pieza por pieza.">
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══ CÓMO FUNCIONA ═══ -->
+  <section class="section" id="pasos">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow" data-i18n="steps.eyebrow">Cómo funciona</span>
+        <h2 data-i18n="steps.title">Tres pasos, sin instalar nada.</h2>
+      </div>
+      <div class="grid grid-3">
+        <article class="step reveal" data-step="01">
+          <h3 data-i18n="s1.title">Diseñá</h3>
+          <p data-i18n="s1.body">Agregá perfiles del catálogo o generá una plantilla, y acomodá las piezas con las medidas exactas de tu mueble.</p>
+        </article>
+        <article class="step reveal" data-step="02">
+          <h3 data-i18n="s2.title">Revisá materiales</h3>
+          <p data-i18n="s2.body">Mirá los cortes por barra, los kilos y el costo estimado. Ajustá lo que haga falta y volvé a comprobar.</p>
+        </article>
+        <article class="step reveal" data-step="03">
+          <h3 data-i18n="s3.title">Llevate los planos</h3>
+          <p data-i18n="s3.body">Descargá los planos acotados y la lista de cortes en PDF, y ponete a soldar con las medidas en la mano.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PARA QUIÉN ES ═══ -->
+  <section class="section" id="publico">
+    <div class="container container-narrow">
+      <div class="section-head reveal">
+        <span class="eyebrow" data-i18n="aud.eyebrow">Para quién es</span>
+        <h2 data-i18n="aud.title">Pensado para el que corta y suelda.</h2>
+        <p data-i18n="aud.body">
+          No hace falta saber CAD ni haber usado un programa 3D antes. Si sabés qué
+          caño vas a comprar y qué medidas querés, sabés usarlo.
+        </p>
+      </div>
+      <ul class="audience reveal">
+        <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="aud.1">Soldadores</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="aud.2">Herreros</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="aud.3">Carpintería metálica</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="aud.4">Makers y aficionados</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ PREGUNTAS ═══ -->
+  <section class="section" id="preguntas">
+    <div class="container container-narrow">
+      <div class="section-head reveal">
+        <span class="eyebrow" data-i18n="faq.eyebrow">Preguntas</span>
+        <h2 data-i18n="faq.title">Lo que suelen preguntar.</h2>
+      </div>
+      <div class="faq">
+        <details class="reveal">
+          <summary data-i18n="q1">¿Necesito instalar algo?</summary>
+          <div class="faq-body" data-i18n-html="a1">No. Se abre en el navegador y ya podés empezar a diseñar. Tampoco hay que crear una cuenta ni dejar un mail.</div>
+        </details>
+        <details class="reveal">
+          <summary data-i18n="q2">¿Mis diseños se suben a algún lado?</summary>
+          <div class="faq-body" data-i18n-html="a2">No. Todo se procesa dentro de tu navegador: los diseños, los cálculos y los PDF. Nada viaja a un servidor, y el trabajo en curso queda guardado en tu propia computadora.</div>
+        </details>
+        <details class="reveal">
+          <summary data-i18n="q3">¿Sirve para cualquier mueble?</summary>
+          <div class="faq-body" data-i18n-html="a3">Sí. Las plantillas son solo un atajo para arrancar: podés mover, rotar y redimensionar cada pieza por separado, o armar el mueble desde cero pieza por pieza.</div>
+        </details>
+        <details class="reveal">
+          <summary data-i18n="q4">¿Qué puedo exportar?</summary>
+          <div class="faq-body" data-i18n-html="a4">Planos técnicos y lista de materiales en PDF, imágenes PNG de cada vista, el modelo 3D en <span class="mono">.glb</span> (para Blender) o <span class="mono">.obj</span> (para CAD), y el archivo del proyecto para seguir editándolo después.</div>
+        </details>
+        <details class="reveal">
+          <summary data-i18n="q5">¿Es gratis?</summary>
+          <div class="faq-body" data-i18n-html="a5">Sí, y sin publicidad. Si te resulta útil, podés apoyarlo con una donación.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ APOYO / DONACIÓN ═══ -->
+  <section class="section" id="apoyo">
+    <div class="container container-narrow">
+      <div class="support reveal">
+        <div class="card-icon" style="margin-inline:auto"><svg class="ico" aria-hidden="true"><use href="#i-coffee"/></svg></div>
+        <h2 data-i18n="sup.title">¿Te ahorró una barra de más?</h2>
+        <p data-i18n="sup.body">
+          Este proyecto es gratis, sin cuentas ni publicidad, y lo mantengo en mi
+          tiempo libre. Si te sirvió en el taller, podés invitarme un café: es lo que
+          me permite seguir agregando funciones.
+        </p>
+        <!-- DONACION_URL — reemplazar por el link de Buy Me a Coffee, Cafecito, etc. -->
+        <a class="btn btn-primary btn-lg" href="#" target="_blank" rel="noopener">
+          <svg class="ico" aria-hidden="true"><use href="#i-coffee"/></svg>
+          <span data-i18n="sup.cta">Invitame un café</span>
+        </a>
+        <p class="support-note" data-i18n="sup.note">Pago único, sin suscripción. También ayuda mucho recomendarlo a otro colega.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══ PIE ═══ -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <a class="brand" href="#top">
+      <img class="brand-mark" src="assets/logo.svg" alt="" width="32" height="32">
+      <span class="brand-name">FerroMadera</span>
+    </a>
+    <span>© <span id="year">2026</span> Emilio Orellana</span>
+    <nav class="footer-links" data-i18n-label="foot.links" aria-label="Enlaces del pie">
+      <a href="https://emilioorellana.com" target="_blank" rel="noopener">emilioorellana.com</a>
+      <a href="/app" data-i18n="foot.openApp">Abrir la app</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

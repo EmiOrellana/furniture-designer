@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="FerroMadera — diseñador 3D de muebles de hierro y madera. Planos, lista de cortes y materiales para el taller.">
+<title>FerroMadera — Diseñador 3D de muebles de hierro y madera</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='6' fill='%23F07B26'/%3E%3Cpath d='M10 22V10h12M10 16h9' stroke='%23151312' stroke-width='3.4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<script>
+// Guardia: este archivo es el CÓDIGO FUENTE. Si se abre con doble click
+// (file://) los módulos no cargan. La app compilada vive en dist/index.html.
+// En el build, vite-plugin-singlefile inserta todo inline y __fmBooted se
+// marca de inmediato, así que el aviso nunca aparece en la versión final.
+setTimeout(function () {
+  if (window.__fmBooted || location.protocol !== 'file:') return;
+  document.body.innerHTML =
+    '<div style="display:flex;height:100vh;align-items:center;justify-content:center;' +
+    'background:#0e0f11;color:#e9eaec;font-family:system-ui,sans-serif;text-align:center;padding:20px">' +
+    '<div><h1 style="color:#f07b26;margin-bottom:12px">Este es el código fuente 🛠</h1>' +
+    '<p style="line-height:1.7;color:#a2a8b0">Abriste <code>app/index.html</code>, que solo funciona con el servidor de desarrollo.<br>' +
+    'La aplicación lista para usar está en <b style="color:#e9eaec">app/dist/index.html</b> — abrila con doble click.<br><br>' +
+    'Para desarrollar: <code style="background:#24282d;padding:2px 8px;border-radius:4px">npm run dev</code></p></div></div>';
+}, 1500);
+</script>
+
+<!-- ═══ SPRITE DE ICONOS (trazo 2px, esquinas redondeadas, 24×24) ═══ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8.5 6 4 10.5 8.5 15"/><path d="M4 10.5h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15.5 6 20 10.5 15.5 15"/><path d="M20 10.5H10a6 6 0 0 0 0 12h3"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/><path d="M13 3v6h6"/><path d="M13 3l6 6"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h7"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8L9 5H5a2 2 0 0 0-2 2z"/></symbol>
+    <symbol id="i-bom" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v2"/><path d="M9 10h6M9 14h6M9 18h4"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 1.8h6A2 2 0 0 0 17 20l1-13"/><path d="M9 7V4h6v3"/></symbol>
+    <symbol id="i-mirror" viewBox="0 0 24 24"><path d="M12 3v18" stroke-dasharray="2.5 3"/><path d="M8 7 3 12l5 5V7z"/><path d="M16 7l5 5-5 5V7z"/></symbol>
+    <symbol id="i-array" viewBox="0 0 24 24"><rect x="3" y="9" width="5" height="6" rx="1"/><rect x="10" y="9" width="5" height="6" rx="1"/><rect x="17" y="9" width="4" height="6" rx="1"/></symbol>
+    <symbol id="i-group" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 1 0-6.4-6.4L11.6 6"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 1 0 6.4 6.4l1.6-1.6"/></symbol>
+    <symbol id="i-ungroup" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 1 0-6.4-6.4"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 1 0 6.4 6.4"/><path d="M4 4l16 16" stroke-dasharray="2.5 3"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M10.6 5.3A10.8 10.8 0 0 1 12 5c6.2 0 10 7 10 7a17.5 17.5 0 0 1-2.2 3M6.4 6.4A16.6 16.6 0 0 0 2 12s3.8 7 10 7c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3l7 17 2.5-7L21 10.5 5 3z"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 9 2 12l3 3M19 9l3 3-3 3"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M17 2v4h-4"/></symbol>
+    <symbol id="i-measure" viewBox="0 0 24 24"><rect x="1.5" y="14.5" width="21" height="6.5" rx="1.5" transform="rotate(-45 12 17)"/><path d="M8.5 15.5l1.8 1.8M11.5 12.5l1.8 1.8M14.5 9.5l1.8 1.8"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.6 3H5a2 2 0 0 0-2 2v7.6a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l7.6-7.6a2 2 0 0 0 0-2.8L14 3.6a2 2 0 0 0-1.4-.6z"/><circle cx="8.5" cy="8.5" r="1.6"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.8-2.8 2.3-2.8 4"/><path d="M12 17.5v.1"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 2.5 21 7v10l-9 4.5L3 17V7l9-4.5z"/><path d="M3 7l9 4.5L21 7"/><path d="M12 11.5V21.5"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/><path d="M8 14h1.6a1.5 1.5 0 0 0 0-3H8v6M13 11v6h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 15.5 16 11l-8 8"/></symbol>
+    <symbol id="i-magic" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></symbol>
+    <symbol id="i-frame" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="3"/></symbol>
+    <!-- Secciones de perfiles (catálogo) -->
+    <symbol id="sec-square" viewBox="0 0 28 28"><rect x="5" y="5" width="18" height="18" rx="1.5"/><rect x="9" y="9" width="10" height="10" rx="1"/></symbol>
+    <symbol id="sec-rect" viewBox="0 0 28 28"><rect x="3" y="8" width="22" height="12" rx="1.5"/><rect x="7" y="11.5" width="14" height="5" rx="1"/></symbol>
+    <symbol id="sec-round" viewBox="0 0 28 28"><circle cx="14" cy="14" r="9.5"/><circle cx="14" cy="14" r="5"/></symbol>
+    <symbol id="sec-angle" viewBox="0 0 28 28"><path d="M6 5v18h18v-5H11V5H6z"/></symbol>
+    <symbol id="sec-flat" viewBox="0 0 28 28"><rect x="3" y="11" width="22" height="6" rx="1"/></symbol>
+    <symbol id="sec-wood" viewBox="0 0 28 28"><rect x="3" y="8" width="22" height="12" rx="1.5"/><path d="M6.5 12c3-1.5 6-1.5 8 0s5 1.5 7.5 0M6.5 16c3 1.5 6 1.5 8 0s5-1.5 7.5 0"/></symbol>
+  </defs>
+</svg>
+
+<div id="ui">
+  <!-- ═══ BARRA SUPERIOR ═══ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="var(--accent)"/><path d="M10.5 23V9.5H22M10.5 16h9.5" stroke="#181310" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg>
+      </span>
+      <span class="brand-name">FerroMadera</span>
+      <span class="brand-tag" data-i18n="brand.tag">Diseñador 3D de muebles</span>
+    </div>
+    <div class="topbar-group">
+      <button class="btn btn-ghost btn-ico" id="btn-undo" data-i18n-tip="tip.undo" data-i18n-label="tip.undo" data-tip="Deshacer (Ctrl+Z)" aria-label="Deshacer"><svg><use href="#i-undo"/></svg></button>
+      <button class="btn btn-ghost btn-ico" id="btn-redo" data-i18n-tip="tip.redo" data-i18n-label="tip.redo" data-tip="Rehacer (Ctrl+Y)" aria-label="Rehacer"><svg><use href="#i-redo"/></svg></button>
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-group">
+      <button class="btn btn-ghost" id="btn-new"><svg><use href="#i-new"/></svg><span data-i18n="btn.new">Nuevo</span></button>
+      <button class="btn btn-ghost" id="btn-open"><svg><use href="#i-open"/></svg><span data-i18n="btn.open">Abrir</span></button>
+      <button class="btn btn-ghost" id="btn-save" data-i18n-tip="tip.save" data-tip="Guardar proyecto (Ctrl+S)"><svg><use href="#i-save"/></svg><span data-i18n="btn.save">Guardar</span></button>
+      <input type="file" id="file-input" accept=".fmd,.json" hidden>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="lang-switch" role="group" aria-label="Idioma / Language">
+      <button class="lang-btn" id="lang-es" data-tip="Español" aria-label="Español" aria-pressed="false"><img src="/src/assets/flag-es.svg" alt="" width="20" height="14"></button>
+      <button class="lang-btn" id="lang-en" data-tip="English" aria-label="English" aria-pressed="false"><img src="/src/assets/flag-en.svg" alt="" width="20" height="14"></button>
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-group">
+      <button class="btn btn-tonal" id="btn-bom"><svg><use href="#i-bom"/></svg><span data-i18n="btn.bom">Materiales y cortes</span></button>
+      <button class="btn btn-primary" id="btn-export"><svg><use href="#i-export"/></svg><span data-i18n="btn.export">Exportar</span></button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- ═══ PANEL IZQUIERDO: CATÁLOGO ═══ -->
+    <aside class="panel panel-left">
+      <section class="panel-section">
+        <h2 class="section-title" data-i18n="sec.add">Agregar perfil</h2>
+        <div class="catalog" id="catalog" role="listbox" aria-label="Catálogo de materiales"></div>
+        <div class="new-params" id="new-params"></div>
+        <button class="btn btn-primary btn-block" id="btn-add"><svg><use href="#i-plus"/></svg><span data-i18n="btn.addPiece">Agregar pieza</span></button>
+      </section>
+      <section class="panel-section">
+        <h2 class="section-title" data-i18n="sec.templates">Plantillas</h2>
+        <div class="tpl-row">
+          <button class="tpl-card" data-tpl="mesa">
+            <svg viewBox="0 0 48 34" aria-hidden="true"><rect x="4" y="6" width="40" height="5" rx="1.5"/><path d="M8 11v17M40 11v17M8 20h32" stroke-width="3"/></svg>
+            <span data-i18n="tpl.mesa">Mesa</span>
+          </button>
+          <button class="tpl-card" data-tpl="estante">
+            <svg viewBox="0 0 48 34" aria-hidden="true"><path d="M8 3v28M40 3v28M8 8h32M8 18h32M8 28h32" stroke-width="3"/></svg>
+            <span data-i18n="tpl.estante">Estantería</span>
+          </button>
+        </div>
+        <p class="hint" data-i18n="tpl.hint">Genera un mueble paramétrico completo, listo para ajustar pieza por pieza.</p>
+      </section>
+      <section class="panel-section panel-grow">
+        <h2 class="section-title" data-i18n="sec.shortcuts">Atajos</h2>
+        <div class="shortcut-grid">
+          <span><kbd>G</kbd> <span data-i18n="sc.move">mover</span></span><span><kbd>R</kbd> <span data-i18n="sc.rotate">rotar</span></span>
+          <span><kbd>F</kbd> <span data-i18n="sc.frame">encuadrar</span></span><span><kbd>M</kbd> <span data-i18n="sc.measure">medir</span></span>
+          <span><kbd>Ctrl</kbd>+<kbd>D</kbd> <span data-i18n="sc.duplicate">duplicar</span></span><span><kbd>Supr</kbd> <span data-i18n="sc.delete">eliminar</span></span>
+          <span><kbd>Alt</kbd><span data-i18n="sc.altclick">+click pieza de grupo</span></span><span><kbd>Shift</kbd><span data-i18n="sc.shiftclick">+click multi</span></span>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ═══ VIEWPORT ═══ -->
+    <div id="viewport">
+      <div class="vp-toolbar">
+        <div class="segmented" role="group" aria-label="Herramienta">
+          <button class="seg-btn active" id="tool-select" data-i18n-tip="tip.select" data-i18n-label="tip.select" data-tip="Seleccionar (Esc)" aria-label="Seleccionar"><svg><use href="#i-select"/></svg></button>
+          <button class="seg-btn" id="tool-move" data-i18n-tip="tip.move" data-i18n-label="tip.move" data-tip="Mover (G)" aria-label="Mover"><svg><use href="#i-move"/></svg></button>
+          <button class="seg-btn" id="tool-rotate" data-i18n-tip="tip.rotate" data-i18n-label="tip.rotate" data-tip="Rotar (R)" aria-label="Rotar"><svg><use href="#i-rotate"/></svg></button>
+        </div>
+        <label class="snap-chip" data-i18n-tip="tip.snap" data-tip="Ajuste a grilla y a 15° al rotar">
+          <input type="checkbox" id="snap-on" checked>
+          <span>Snap</span>
+          <select id="snap-step" aria-label="Snap">
+            <option value="1">1 mm</option><option value="5">5 mm</option>
+            <option value="10" selected>10 mm</option><option value="25">25 mm</option>
+            <option value="50">50 mm</option>
+          </select>
+        </label>
+        <div class="segmented" role="group" aria-label="Vista">
+          <button class="seg-btn seg-txt" id="view-iso" data-i18n-tip="tip.viewIso" data-tip="Vista isométrica (Inicio)">3D</button>
+          <button class="seg-btn seg-txt" id="view-front" data-i18n-tip="tip.viewFront" data-i18n="view.btnFront" data-tip="Vista frontal">F</button>
+          <button class="seg-btn seg-txt" id="view-side" data-i18n-tip="tip.viewSide" data-i18n="view.btnSide" data-tip="Vista lateral">L</button>
+          <button class="seg-btn seg-txt" id="view-top" data-i18n-tip="tip.viewTop" data-i18n="view.btnTop" data-tip="Vista superior">S</button>
+        </div>
+        <div class="vp-tools">
+          <button class="seg-btn active" id="btn-grid" data-i18n-tip="tip.grid" data-i18n-label="tip.grid" data-tip="Grilla" aria-label="Grilla" aria-pressed="true"><svg><use href="#i-grid"/></svg></button>
+          <button class="seg-btn active" id="btn-labels" data-i18n-tip="tip.labels" data-i18n-label="tip.labels" data-tip="Etiquetas" aria-label="Etiquetas" aria-pressed="true"><svg><use href="#i-tag"/></svg></button>
+          <button class="seg-btn" id="btn-measure" data-i18n-tip="tip.measure" data-i18n-label="tip.measure" data-tip="Medir distancia (M)" aria-label="Medir" aria-pressed="false"><svg><use href="#i-measure"/></svg></button>
+          <button class="seg-btn" id="btn-frame" data-i18n-tip="tip.frameSel" data-i18n-label="tip.frameSel" data-tip="Encuadrar selección (F)" aria-label="Encuadrar"><svg><use href="#i-frame"/></svg></button>
+          <button class="seg-btn" id="btn-help" data-i18n-tip="tip.help" data-i18n-label="tip.help" data-tip="Ayuda" aria-label="Ayuda" aria-pressed="false"><svg><use href="#i-help"/></svg></button>
+        </div>
+      </div>
+
+      <div class="sel-card" id="sel-card" hidden>
+        <div class="sel-name" id="sel-name">—</div>
+        <div class="sel-meta" id="sel-meta"></div>
+      </div>
+
+      <div class="help-card" id="help-card" hidden>
+        <h3 data-i18n="help.title">Controles</h3>
+        <div class="help-grid">
+          <span data-i18n="help.orbit">Orbitar</span><span data-i18n="help.orbitV">arrastrar</span>
+          <span data-i18n="help.zoom">Zoom</span><span data-i18n="help.zoomV">rueda</span>
+          <span data-i18n="help.pan">Panear</span><span data-i18n="help.panV">click derecho</span>
+          <span data-i18n="help.sel">Seleccionar</span><span data-i18n="help.selV">click</span>
+          <span data-i18n="help.multi">Multi-selección</span><span data-i18n-html="help.multiV"><kbd>Shift</kbd> + click</span>
+          <span data-i18n="help.grp">Pieza dentro de grupo</span><span data-i18n-html="help.grpV"><kbd>Alt</kbd> + click</span>
+          <span data-i18n="help.nudge">Empujar pieza</span><span data-i18n-html="help.nudgeV"><kbd>←→↑↓</kbd> · <kbd>RePág</kbd>/<kbd>AvPág</kbd></span>
+          <span data-i18n="help.save">Guardar</span><span data-i18n-html="help.saveV"><kbd>Ctrl</kbd>+<kbd>S</kbd></span>
+        </div>
+      </div>
+
+      <div class="empty-hero" id="empty-hero">
+        <svg viewBox="0 0 48 34" aria-hidden="true"><rect x="4" y="6" width="40" height="5" rx="1.5"/><path d="M8 11v17M40 11v17M8 20h32" stroke-width="2.5"/></svg>
+        <h3 data-i18n="empty.title">Empezá tu mueble</h3>
+        <p data-i18n-html="empty.body">Elegí un perfil del catálogo y agregalo,<br>o generá una <b>plantilla</b> para arrancar rápido.</p>
+      </div>
+
+      <canvas id="overlay" aria-hidden="true"></canvas>
+
+      <div class="vp-status">
+        <span id="status-hint">Orbitar: arrastrar · Zoom: rueda · Panear: click derecho</span>
+        <span class="status-stats" id="status-stats"></span>
+      </div>
+    </div>
+
+    <!-- ═══ PANEL DERECHO: INSPECTOR + PIEZAS ═══ -->
+    <aside class="panel panel-right">
+      <section class="panel-section" id="inspector" hidden>
+        <h2 class="section-title" data-i18n="sec.props">Propiedades</h2>
+        <div id="inspector-single">
+          <div class="field">
+            <label for="prop-name" data-i18n="field.name">Nombre</label>
+            <input type="text" id="prop-name" autocomplete="off">
+          </div>
+          <div class="field">
+            <label><span data-i18n="field.pos">Posición</span> <span class="unit" data-i18n="unit.mm">mm</span></label>
+            <div class="triple">
+              <div class="axis-input axis-x"><input type="number" id="prop-px" step="1" aria-label="X"></div>
+              <div class="axis-input axis-y"><input type="number" id="prop-py" step="1" aria-label="Y"></div>
+              <div class="axis-input axis-z"><input type="number" id="prop-pz" step="1" aria-label="Z"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label><span data-i18n="field.rot">Rotación</span> <span class="unit" data-i18n="unit.deg">grados</span></label>
+            <div class="triple">
+              <div class="axis-input axis-x"><input type="number" id="prop-rx" step="15" aria-label="X"></div>
+              <div class="axis-input axis-y"><input type="number" id="prop-ry" step="15" aria-label="Y"></div>
+              <div class="axis-input axis-z"><input type="number" id="prop-rz" step="15" aria-label="Z"></div>
+            </div>
+          </div>
+          <div id="prop-dims"></div>
+          <div id="prop-look">
+            <div class="field field-inline">
+              <label for="prop-color" data-i18n="field.color">Color</label>
+              <input type="color" id="prop-color">
+            </div>
+            <div class="field">
+              <label for="prop-opacity"><span data-i18n="field.opacity">Opacidad</span> <output id="opacity-val">100%</output></label>
+              <input type="range" id="prop-opacity" min="10" max="100" value="100">
+            </div>
+          </div>
+        </div>
+        <div id="inspector-multi" hidden><p class="multi-note" id="multi-note"></p></div>
+        <div class="action-grid">
+          <button class="btn btn-ghost" id="btn-dup" data-tip="Ctrl+D"><svg><use href="#i-copy"/></svg><span data-i18n="act.dup">Duplicar</span></button>
+          <button class="btn btn-ghost btn-danger-ghost" id="btn-del" data-tip="Supr"><svg><use href="#i-trash"/></svg><span data-i18n="act.del">Eliminar</span></button>
+          <button class="btn btn-ghost" id="btn-mirror-x" data-i18n-tip="tip.mirrorX" data-tip="Copia espejada respecto al plano YZ del origen"><svg><use href="#i-mirror"/></svg><span data-i18n="act.mirrorX">Espejo X</span></button>
+          <button class="btn btn-ghost" id="btn-mirror-z" data-i18n-tip="tip.mirrorZ" data-tip="Copia espejada respecto al plano XY del origen"><svg><use href="#i-mirror"/></svg><span data-i18n="act.mirrorZ">Espejo Z</span></button>
+          <button class="btn btn-ghost" id="btn-array"><svg><use href="#i-array"/></svg><span data-i18n="act.array">Serie…</span></button>
+          <button class="btn btn-ghost" id="btn-group-sel"><svg><use href="#i-group"/></svg><span data-i18n="act.group">Agrupar</span></button>
+        </div>
+      </section>
+
+      <section class="panel-section panel-grow">
+        <h2 class="section-title"><span data-i18n="sec.pieces">Piezas</span> <span class="count-badge" id="piece-count">0</span></h2>
+        <div id="groups-list"></div>
+        <div id="pieces-list">
+          <div class="empty-list" data-i18n-html="list.empty">Sin piezas todavía.<br>Agregá un perfil desde el catálogo.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- ═══ MODALES ═══ -->
+<div class="modal-overlay" id="modal-confirm" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">Confirmar</h2>
+    <p class="modal-text" id="confirm-msg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close data-i18n="confirm.cancel">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-yes" data-i18n="confirm.yes">Sí, confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-materials" hidden>
+  <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="bom-title">
+    <button class="modal-x" data-close aria-label="Cerrar" data-i18n-label="btn.close"><svg><use href="#i-x"/></svg></button>
+    <h2 id="bom-title" data-i18n="bom.title">Materiales y cortes</h2>
+    <div class="bom-settings">
+      <div class="field">
+        <label for="bom-barlen"><span data-i18n="bom.bar">Barra comercial</span> <span class="unit" data-i18n="unit.mm">mm</span></label>
+        <input type="number" id="bom-barlen" value="6000" min="500">
+      </div>
+      <div class="field">
+        <label for="bom-kerf"><span data-i18n="bom.kerf">Kerf (corte)</span> <span class="unit" data-i18n="unit.mm">mm</span></label>
+        <input type="number" id="bom-kerf" value="3" min="0">
+      </div>
+    </div>
+    <div id="bom-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close data-i18n="btn.close">Cerrar</button>
+      <button class="btn btn-primary" id="btn-bom-pdf"><svg><use href="#i-pdf"/></svg><span data-i18n="bom.pdf">Exportar PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-export" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="export-title">
+    <button class="modal-x" data-close aria-label="Cerrar" data-i18n-label="btn.close"><svg><use href="#i-x"/></svg></button>
+    <h2 id="export-title" data-i18n="exp.title">Exportar</h2>
+    <div class="export-list">
+      <button class="export-item" id="exp-pdf">
+        <svg><use href="#i-pdf"/></svg>
+        <span><b data-i18n="exp.pdf">Planos PDF</b><small data-i18n="exp.pdfDesc">3 vistas ortográficas con cotas + resumen</small></span>
+      </button>
+      <button class="export-item" id="exp-png">
+        <svg><use href="#i-image"/></svg>
+        <span><b data-i18n="exp.png">Imagen PNG</b><small data-i18n="exp.pngDesc">Vista frontal, lateral o superior con cotas</small></span>
+      </button>
+      <button class="export-item" id="exp-glb">
+        <svg><use href="#i-box"/></svg>
+        <span><b data-i18n="exp.glb">Modelo 3D (.glb)</b><small data-i18n="exp.glbDesc">Para Blender, con colores y nombres</small></span>
+      </button>
+      <button class="export-item" id="exp-obj">
+        <svg><use href="#i-box"/></svg>
+        <span><b data-i18n="exp.obj">Modelo 3D (.obj)</b><small data-i18n="exp.objDesc">Para CAD — unidades en mm</small></span>
+      </button>
+    </div>
+    <div class="png-views" id="png-views" hidden>
+      <button class="btn btn-ghost" data-view="front" data-i18n="view.front">Frontal</button>
+      <button class="btn btn-ghost" data-view="side" data-i18n="view.side">Lateral</button>
+      <button class="btn btn-ghost" data-view="top" data-i18n="view.top">Superior</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-array" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="array-title">
+    <button class="modal-x" data-close aria-label="Cerrar" data-i18n-label="btn.close"><svg><use href="#i-x"/></svg></button>
+    <h2 id="array-title" data-i18n="arr.title">Repetir en serie</h2>
+    <div class="field">
+      <label for="arr-count" data-i18n="arr.count">Cantidad total (incluida la original)</label>
+      <input type="number" id="arr-count" value="4" min="2" max="100">
+    </div>
+    <div class="field">
+      <label><span data-i18n="arr.sep">Separación entre copias</span> <span class="unit" data-i18n="unit.mm">mm</span></label>
+      <div class="triple">
+        <div class="axis-input axis-x"><input type="number" id="arr-dx" value="100" aria-label="X"></div>
+        <div class="axis-input axis-y"><input type="number" id="arr-dy" value="0" aria-label="Y"></div>
+        <div class="axis-input axis-z"><input type="number" id="arr-dz" value="0" aria-label="Z"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close data-i18n="confirm.cancel">Cancelar</button>
+      <button class="btn btn-primary" id="arr-ok" data-i18n="arr.ok">Generar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-template" hidden>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
+    <button class="modal-x" data-close aria-label="Cerrar" data-i18n-label="btn.close"><svg><use href="#i-x"/></svg></button>
+    <h2 id="tpl-title">Plantilla</h2>
+    <div id="tpl-fields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close data-i18n="confirm.cancel">Cancelar</button>
+      <button class="btn btn-primary" id="tpl-ok"><svg><use href="#i-magic"/></svg><span data-i18n="arr.ok">Generar</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

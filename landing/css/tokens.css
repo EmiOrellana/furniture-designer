@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TOKENS — el panel de control del diseño.
+   Casi todo lo visual (colores, fuentes, tamaños, espaciados) se ajusta
+   desde acá sin tocar el resto del CSS.
+   Los colores replican el sistema de la app (app/src/style.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Colores: superficies ─────────────────────────────────── */
+  --bg: #0e0f11;
+  --surface: #16181b;
+  --surface-2: #1d2024;
+  --surface-3: #24282d;
+  --border: #2a2e34;
+  --border-strong: #3d434b;
+
+  /* ── Colores: texto ───────────────────────────────────────── */
+  --text: #e9eaec;
+  --text-dim: #a2a8b0;
+  --text-faint: #868d96;  /* aclarado respecto de la app: cumple AA 4.5:1 sobre --bg */
+
+  /* ── Colores: marca y semánticos ──────────────────────────── */
+  --accent: #f07b26;
+  --accent-hover: #ff8f3d;
+  --accent-soft: rgba(240, 123, 38, 0.12);
+  --on-accent: #1a1006;
+  --ok: #3fb27f;
+  --info: #4c9eeb;
+
+  /* ── Tipografía ───────────────────────────────────────────────
+     Para cambiar las fuentes: editá estas dos variables Y el <link>
+     de Google Fonts en index.html.                                  */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+
+  /* Escala tipográfica. Los títulos usan clamp() para adaptarse solos
+     al ancho de pantalla: clamp(mínimo, fluido, máximo).             */
+  --fs-xs:   0.75rem;    /* 12px — etiquetas, notas          */
+  --fs-sm:   0.875rem;   /* 14px — texto secundario          */
+  --fs-base: 1rem;       /* 16px — cuerpo                    */
+  --fs-md:   1.0625rem;  /* 17px — cuerpo destacado          */
+  --fs-lg:   1.25rem;    /* 20px — subtítulos                */
+  --fs-xl:   clamp(1.5rem, 1.1rem + 1.6vw, 2rem);      /* títulos de sección */
+  --fs-2xl:  clamp(1.9rem, 1.3rem + 2.6vw, 2.75rem);   /* título del hero    */
+
+  --lh-tight: 1.2;
+  --lh-normal: 1.6;
+  --lh-loose: 1.75;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ── Espaciado (escala de 4 px) ───────────────────────────── */
+  --sp-1: 0.25rem;   /*  4px */
+  --sp-2: 0.5rem;    /*  8px */
+  --sp-3: 0.75rem;   /* 12px */
+  --sp-4: 1rem;      /* 16px */
+  --sp-5: 1.5rem;    /* 24px */
+  --sp-6: 2rem;      /* 32px */
+  --sp-7: 3rem;      /* 48px */
+  --sp-8: 4rem;      /* 64px */
+  --sp-9: 6rem;      /* 96px */
+
+  /* Aire vertical entre secciones (se achica solo en mobile) */
+  --section-gap: clamp(3.5rem, 2rem + 7vw, 7rem);
+
+  /* ── Layout ───────────────────────────────────────────────── */
+  --container: 1140px;      /* ancho máximo del contenido */
+  --container-narrow: 780px; /* ancho para bloques de texto */
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+
+  /* ── Bordes y sombras ─────────────────────────────────────── */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, .45);
+  --shadow-3: 0 24px 70px rgba(0, 0, 0, .55);
+
+  /* ── Movimiento ───────────────────────────────────────────── */
+  --t-fast: 150ms cubic-bezier(.2, .7, .3, 1);
+  --t-med: 260ms cubic-bezier(.2, .7, .3, 1);
+}

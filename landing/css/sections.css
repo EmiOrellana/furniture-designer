@@ -1,0 +1,295 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SECCIONES — estilos propios de cada bloque de la página.
+   Orden: barra · hero · qué hace · funciones · pasos · público ·
+          preguntas · apoyo · pie
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Barra superior ─────────────────────────────────────────── */
+
+/* El fondo y el borde son fijos, no dependen del JS: si el script no corre,
+   la barra tiene que seguir siendo legible sobre el contenido. Al hacer
+   scroll solo se agrega una sombra, que es un adorno prescindible. */
+.nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  background: rgba(14, 15, 17, .92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--t-med), box-shadow var(--t-med);
+}
+.nav.is-stuck {
+  background: rgba(14, 15, 17, .97);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, .4);
+}
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-height: 68px;
+}
+.nav-links {
+  display: flex;
+  gap: var(--sp-5);
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.nav-links a { transition: color var(--t-fast); }
+.nav-links a:hover { color: var(--text); }
+.nav .btn { margin-left: var(--sp-4); }
+
+.nav .lang-switch { margin-left: var(--sp-2); }
+
+@media (max-width: 720px) {
+  .nav-links { display: none; }
+  .nav .lang-switch { margin-left: auto; }
+  .nav .btn { margin-left: var(--sp-2); }
+}
+/* En pantallas muy angostas, el logo solo: deja aire para idioma + CTA */
+@media (max-width: 430px) {
+  .nav .brand-name { display: none; }
+  .nav-inner { gap: var(--sp-3); }
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  padding-top: calc(68px + var(--sp-8));
+  padding-bottom: var(--section-gap);
+  text-align: center;
+  overflow: hidden;
+}
+/* Resplandor sutil detrás del título */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -180px; left: 50%;
+  width: min(900px, 120vw); height: 520px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(240, 123, 38, .13), transparent 68%);
+  pointer-events: none;
+}
+.hero h1 { max-width: 20ch; margin-inline: auto; }
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+}
+.hero-shot {
+  margin-top: var(--sp-8);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3);
+}
+
+/* ── Qué hace (descripción directa) ─────────────────────────── */
+
+.what-list { display: grid; gap: var(--sp-3); margin-top: var(--sp-6); }
+.what-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+}
+.what-item svg { width: 19px; height: 19px; margin-top: 2px; color: var(--accent); flex-shrink: 0; }
+.what-item p { color: var(--text); font-size: var(--fs-md); }
+.what-item strong { font-weight: var(--fw-semibold); }
+
+/* ── Funciones: filas alternadas ────────────────────────────── */
+
+.feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  padding-block: var(--sp-7);
+}
+/* Filas pares: imagen a la izquierda */
+.feature:nth-child(even) .feature-media { order: -1; }
+
+.feature h3 { font-size: var(--fs-lg); margin-bottom: var(--sp-3); }
+.feature p { font-size: var(--fs-md); line-height: var(--lh-loose); }
+.feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+.tag {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+/* Las capturas de PDF se recortan por arriba para mostrar lo importante */
+.frame-crop { max-height: 460px; overflow: hidden; }
+
+@media (max-width: 860px) {
+  .feature { grid-template-columns: 1fr; gap: var(--sp-5); }
+  .feature:nth-child(even) .feature-media { order: 0; }
+}
+
+/* Tarjeta de datos (fila "peso y costo") */
+.data-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  box-shadow: var(--shadow-2);
+}
+.data-card-head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+  color: var(--text-dim);
+}
+.data-row span:last-child { color: var(--text); }
+.data-total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-strong);
+  color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+
+/* ── Pasos ──────────────────────────────────────────────────── */
+
+.step { position: relative; padding-top: var(--sp-6); }
+.step::before {
+  content: attr(data-step);
+  position: absolute;
+  top: 0; left: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  opacity: .55;
+}
+.step h3 { margin-bottom: var(--sp-2); }
+.step p { font-size: var(--fs-sm); }
+
+/* ── Público ────────────────────────────────────────────────── */
+
+.audience { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-5); }
+.audience li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.audience svg { width: 16px; height: 16px; color: var(--accent); }
+
+/* ── Preguntas frecuentes ───────────────────────────────────── */
+
+.faq { display: grid; gap: var(--sp-3); margin-top: var(--sp-6); }
+.faq details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color var(--t-fast);
+}
+.faq details[open] { border-color: var(--border-strong); }
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  min-height: 44px;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: '';
+  width: 10px; height: 10px;
+  border-right: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform var(--t-fast);
+  flex-shrink: 0;
+}
+.faq details[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.faq summary:hover { color: var(--accent); }
+.faq-body { padding: 0 var(--sp-5) var(--sp-5); font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* ── Apoyo / donación ───────────────────────────────────────── */
+
+.support {
+  position: relative;
+  text-align: center;
+  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter);
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.support::before {
+  content: '';
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.support h2 { margin-bottom: var(--sp-3); }
+.support p { max-width: 52ch; margin: 0 auto var(--sp-6); font-size: var(--fs-md); line-height: var(--lh-loose); }
+.support-note { margin-top: var(--sp-4); font-size: var(--fs-xs); color: var(--text-faint); }
+
+/* ── Pie ────────────────────────────────────────────────────── */
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding-block: var(--sp-6);
+  margin-top: var(--section-gap);
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-5);
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.footer-links { display: flex; gap: var(--sp-5); margin-left: auto; }
+.footer-links a { transition: color var(--t-fast); }
+.footer-links a:hover { color: var(--accent); }
+
+@media (max-width: 560px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  .footer-links { margin-left: 0; }
+}

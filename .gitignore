@@ -1,0 +1,16 @@
+# Dependencias
+node_modules/
+
+# Salidas de compilación (se generan con `npm run build`)
+dist/
+
+# Vercel
+.vercel
+
+# Ajustes locales de Claude Code (launch.json sí se versiona)
+.claude/settings.local.json
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.local

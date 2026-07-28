@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 14">
+  <!-- Reemplazá este archivo por la bandera que quieras (mantené el nombre). -->
+  <rect width="20" height="14" rx="2" fill="#b22234"/>
+  <rect y="2" width="20" height="2" fill="#fff"/>
+  <rect y="6" width="20" height="2" fill="#fff"/>
+  <rect y="10" width="20" height="2" fill="#fff"/>
+  <path d="M0 2 A2 2 0 0 1 2 0 H9 V8 H0 Z" fill="#3c3b6e"/>
+  <g fill="#fff">
+    <circle cx="2.2" cy="2" r=".55"/><circle cx="4.5" cy="2" r=".55"/><circle cx="6.8" cy="2" r=".55"/>
+    <circle cx="3.3" cy="4" r=".55"/><circle cx="5.6" cy="4" r=".55"/>
+    <circle cx="2.2" cy="6" r=".55"/><circle cx="4.5" cy="6" r=".55"/><circle cx="6.8" cy="6" r=".55"/>
+  </g>
+</svg>

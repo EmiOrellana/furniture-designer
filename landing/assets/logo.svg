@@ -1,0 +1,10 @@
+<!--
+  LOGO PLACEHOLDER — reemplazá este archivo por el tuyo (mismo nombre: logo.svg).
+  Se usa en la barra superior, el pie y el favicon. Recomendado: cuadrado (1:1),
+  legible a 32 px. Si tu logo es de otra proporción, ajustá el ancho en
+  css/components.css → .brand-mark
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Logo">
+  <rect x="2" y="2" width="28" height="28" rx="7" fill="#F07B26"/>
+  <path d="M10.5 23V9.5H22M10.5 16h9.5" stroke="#181310" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+</svg>

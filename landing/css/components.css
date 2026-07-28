@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════════════════════
+   COMPONENTES reutilizables: botones, tarjetas, encabezados, marca.
+   Agregar una sección nueva no debería requerir CSS nuevo: componer
+   con estas clases.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Botones ────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 44px;              /* objetivo táctil accesible */
+  padding: 0 var(--sp-5);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast),
+              color var(--t-fast), transform var(--t-fast);
+}
+.btn:active { transform: scale(.98); }
+.btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-1);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--border-strong);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--text-faint); background: var(--surface-2); }
+
+.btn-lg { min-height: 52px; padding: 0 var(--sp-6); font-size: var(--fs-md); }
+
+/* ── Marca (logo + nombre) ──────────────────────────────────── */
+
+.brand { display: inline-flex; align-items: center; gap: var(--sp-3); }
+.brand-mark { width: 32px; height: 32px; flex-shrink: 0; }
+.brand-name {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+}
+
+/* ── Selector de idioma (banderas) ──────────────────────────── */
+
+.lang-switch {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 36px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  opacity: .45;
+  filter: saturate(.5);
+  transition: opacity var(--t-fast), filter var(--t-fast), background var(--t-fast);
+}
+.lang-btn img {
+  width: 20px; height: 14px;
+  border-radius: 2.5px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
+}
+.lang-btn:hover { opacity: .85; filter: saturate(.9); }
+.lang-btn.is-active {
+  opacity: 1;
+  filter: saturate(1);
+  background: var(--surface-3);
+}
+
+/* ── Encabezado de sección ──────────────────────────────────── */
+
+.section-head { margin-bottom: var(--sp-7); max-width: 62ch; }
+.section-head p { margin-top: var(--sp-3); font-size: var(--fs-md); line-height: var(--lh-loose); }
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ── Tarjeta ────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.card:hover { border-color: var(--border-strong); }
+.card h3 { margin-bottom: var(--sp-2); }
+.card p { font-size: var(--fs-sm); }
+
+/* Icono de tarjeta */
+.card-icon {
+  display: grid;
+  place-items: center;
+  width: 42px; height: 42px;
+  margin-bottom: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.card-icon svg { width: 21px; height: 21px; }
+
+/* ── Iconos SVG (trazo, coherentes con la app) ──────────────── */
+
+.ico {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Marco de imagen ────────────────────────────────────────── */
+
+.frame {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+.frame img { width: 100%; }
+/* Variante para capturas de documentos (fondo claro) */
+.frame-doc { background: #f5f5f0; }
+
+/* ── Grillas ────────────────────────────────────────────────── */
+
+.grid { display: grid; gap: var(--sp-4); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 860px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
