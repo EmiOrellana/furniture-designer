@@ -208,6 +208,10 @@ button svg, .export-item svg {
 /* ═══ Campos ═══ */
 .field { margin-top: 10px; }
 .field:first-child { margin-top: 0; }
+/* En fila el margen no separa: desplaza. Los contenedores horizontales ya
+   espacian con gap, así que acá el ritmo vertical sobra. */
+.field-pair > .field,
+.bom-settings > .field { margin-top: 0; }
 .field label, .new-params label {
   display: flex; align-items: baseline; justify-content: space-between;
   font-size: 11px; font-weight: 500; color: var(--text-dim);
