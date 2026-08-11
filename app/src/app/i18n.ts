@@ -112,8 +112,10 @@ export const DICT: Record<string, [string, string]> = {
   // Inspector
   'sec.props': ['Propiedades', 'Properties'],
   'field.name': ['Nombre', 'Name'],
-  'field.pos': ['Posición', 'Position'],
-  'field.rot': ['Rotación', 'Rotation'],
+  // El sufijo del marco de referencia no es decorativo: la posición es
+  // absoluta y la rotación es relativa al grupo que contiene la pieza.
+  'field.pos': ['Posición global', 'Global position'],
+  'field.rot': ['Rotación relativa', 'Relative rotation'],
   'field.color': ['Color', 'Color'],
   'field.opacity': ['Opacidad', 'Opacity'],
   'act.dup': ['Duplicar', 'Duplicate'],
@@ -254,11 +256,26 @@ export const DICT: Record<string, [string, string]> = {
   'toast.noRedo': ['Nada para rehacer', 'Nothing to redo'],
   'toast.noPieces': ['No hay piezas', 'No pieces'],
   'toast.noSave': ['No hay piezas para guardar', 'No pieces to save'],
+  'toast.labelsLimit': [
+    'Las etiquetas se ocultan con más de {n} piezas: se superponen y no se leen',
+    'Labels are hidden above {n} pieces: they overlap and become unreadable',
+  ],
+  // Motivos de fallo al abrir un archivo. Los lanza el modelo como clave.
+  'err.notProject': ['El archivo no es un proyecto FerroMadera', 'Not a FerroMadera project file'],
+  'err.futureVersion': [
+    'El archivo es de una versión más nueva (v{v}). Actualizá la aplicación.',
+    'This file uses a newer version (v{v}). Update the app.',
+  ],
+  'err.unreadable': ['No se pudo leer el archivo', 'The file could not be read'],
+  'toast.autosaveErr': [
+    'No se pudo autoguardar (almacenamiento lleno). Guardá el proyecto en un archivo.',
+    'Autosave failed (storage full). Save your project to a file.',
+  ],
   'toast.noExport': ['No hay piezas para exportar', 'No pieces to export'],
   'toast.saved': ['Proyecto guardado', 'Project saved'],
-  'toast.loaded': ['Proyecto cargado: {n} piezas', 'Project loaded: {n} pieces'],
+  'toast.loaded': ['Proyecto cargado: {c}', 'Project loaded: {c}'],
   'toast.loadErr': ['Error al cargar: {e}', 'Load error: {e}'],
-  'toast.restored': ['Diseño restaurado ({n} piezas)', 'Design restored ({n} pieces)'],
+  'toast.restored': ['Diseño restaurado ({c})', 'Design restored ({c})'],
   'toast.glb': [
     'Modelo .glb exportado (escala en metros, listo para Blender)',
     '.glb exported (meter scale, ready for Blender)',
@@ -281,10 +298,10 @@ export const DICT: Record<string, [string, string]> = {
   'pdf.totalWeight': ['PESO TOTAL: {kg} kg', 'TOTAL WEIGHT: {kg} kg'],
   'pdf.bomTitle': ['FERROMADERA - LISTA DE MATERIALES Y CORTES', 'FERROMADERA - MATERIALS & CUT LIST'],
   'pdf.bomMeta': [
-    '{date}  ·  {n} piezas  ·  barra: {bar} mm  ·  kerf: {kerf} mm',
-    '{date}  ·  {n} pieces  ·  stock bar: {bar} mm  ·  kerf: {kerf} mm',
+    '{date}  ·  {c}  ·  barra: {bar} mm  ·  kerf: {kerf} mm',
+    '{date}  ·  {c}  ·  stock bar: {bar} mm  ·  kerf: {kerf} mm',
   ],
-  'pdf.total': ['TOTAL: {n} {w}', 'TOTAL: {n} {w}'],
+  'pdf.total': ['TOTAL: {c}', 'TOTAL: {c}'],
   'pdf.barsNeeded': ['Barras necesarias: {n} x {m} m', 'Bars needed: {n} x {m} m'],
   'pdf.barRow': ['Barra {i}:  {cuts}   (sobra {mm} mm)', 'Bar {i}:  {cuts}   ({mm} mm left)'],
   'pdf.over': [
@@ -328,6 +345,17 @@ export function t(key: string, vars?: Record<string, string | number>): string {
     for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(String(v));
   }
   return out;
+}
+
+/**
+ * Cuenta con su sustantivo: «1 pieza», «3 piezas».
+ *
+ * Único lugar donde vive la regla del plural. Español e inglés la forman
+ * agregando «s» a las palabras que la app pluraliza —pieza/piece, barra/bar—;
+ * el día que entre un idioma que no, se cambia acá y en ningún otro lado.
+ */
+export function plural(n: number, key: string): string {
+  return `${n} ${t(key)}${n === 1 ? '' : 's'}`;
 }
 
 /** Locale para fechas según idioma. */

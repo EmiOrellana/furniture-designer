@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
@@ -38,5 +39,10 @@ export default defineConfig({
     assetsInlineLimit: 100000000,
     cssCodeSplit: false,
     reportCompressedSize: false,
+  },
+  test: {
+    // Sólo las pruebas unitarias. Las de `e2e/` las corre Playwright, y sin
+    // esto Vitest las levantaría por el nombre y fallaría al no ser suyas.
+    include: ['tests/**/*.test.ts'],
   },
 });

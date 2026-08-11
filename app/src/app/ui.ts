@@ -1,20 +1,23 @@
 import * as THREE from 'three';
 import type { PieceType, ProjectState, Unit, ViewName } from '../model/types';
 import { MAT, PIECE_TYPES, defaultParams, pieceDims, pieceWeight } from '../model/materials';
-import { barUtilization, calcBOM, packBars } from '../model/bom';
-import { parseProject } from '../model/serialize';
+import { barUtilization, calcBOM, packBars, totalWeight } from '../model/bom';
+import { ProjectError, parseProject } from '../model/serialize';
 import { Viewer, type GizmoMode } from '../scene/viewer';
-import { setOpacity } from '../scene/builders';
+import { setOpacity, visibleMeshes } from '../scene/builders';
 import { Store, type Piece } from './state';
-import { Overlay } from './overlay';
+import { LABEL_LIMIT, Overlay } from './overlay';
 import { TEMPLATES } from './templates';
-import { applyStatic, getLang, initLang, onLangChange, setLang, t, type Lang } from './i18n';
-import { downloadGLB, downloadOBJ, downloadBlob } from '../export/model3d';
+import { applyStatic, getLang, initLang, onLangChange, plural, setLang, t, type Lang } from './i18n';
+import { downloadGLB, downloadOBJ, downloadBlob, stamp } from '../export/model3d';
 import { exportPlansPDF, exportViewPNG } from '../export/plans';
 import { downloadMaterialsPDF } from '../export/bomPdf';
 
 const LS_PRICES = 'fm3_prices';
 const LS_SETTINGS = 'fm3_settings';
+
+/** Tope de copias en una serie. Coincide con el `max` del input en index.html. */
+const ARRAY_MAX = 100;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
   document.getElementById(id) as T;
@@ -34,8 +37,7 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** "3 piezas" / "3 pieces" — ES y EN pluralizan igual con "s". */
-const nPieces = (n: number) => `${n} ${t('w.piece')}${n !== 1 ? 's' : ''}`;
+const nPieces = (n: number) => plural(n, 'w.piece');
 
 export function initApp(): void {
   /* ══ Núcleo ══════════════════════════════════════════════════ */
@@ -222,10 +224,22 @@ export function initApp(): void {
     $('btn-grid').classList.toggle('active', viewer.grid.visible);
     $('btn-grid').setAttribute('aria-pressed', String(viewer.grid.visible));
   });
+  /**
+   * El botón refleja si las etiquetas se están viendo, no si están pedidas.
+   * Por encima del tope se apagan solas, y antes el botón seguía encendido
+   * mostrando algo que no pasaba.
+   */
+  function updateLabelsButton(): void {
+    const viendose = overlay.showLabels && store.pieces.length <= LABEL_LIMIT;
+    $('btn-labels').classList.toggle('active', viendose);
+    $('btn-labels').setAttribute('aria-pressed', String(viendose));
+  }
   $('btn-labels').addEventListener('click', () => {
     overlay.showLabels = !overlay.showLabels;
-    $('btn-labels').classList.toggle('active', overlay.showLabels);
-    $('btn-labels').setAttribute('aria-pressed', String(overlay.showLabels));
+    updateLabelsButton();
+    if (overlay.showLabels && store.pieces.length > LABEL_LIMIT) {
+      toast(t('toast.labelsLimit', { n: LABEL_LIMIT }));
+    }
   });
   function toggleMeasure(): void {
     overlay.measuring = !overlay.measuring;
@@ -252,7 +266,9 @@ export function initApp(): void {
     const box = new THREE.Box3();
     for (const u of store.sel) {
       const o = store.unitObj(u);
-      if (o) box.expandByObject(o);
+      if (!o) continue;
+      // Sólo lo visible: encuadrar por una pieza oculta dejaba aire inexplicable.
+      for (const m of visibleMeshes(o)) box.expandByObject(m);
     }
     viewer.frameBox(box);
   }
@@ -262,18 +278,40 @@ export function initApp(): void {
   }
 
   /* ══ Inspector ═══════════════════════════════════════════════ */
-  function propFocus(): void { propSnapshot = store.serialize(); }
+  /*
+   * Editar un campo del inspector dispara `input` en cada tecla, pero debe
+   * dejar un único paso de historial: se captura el estado al empezar a editar
+   * y se apila al terminar.
+   *
+   * Dos cuidados, los dos por la misma razón —entre el comienzo y el final de
+   * una edición puede pasar cualquier otra cosa—:
+   *
+   *  · La captura va en el primer `input`, no al enfocar el campo. Enfocar y
+   *    no tocar nada no es una edición.
+   *  · Se anota en qué punto del historial se capturó. Si el historial avanzó
+   *    desde entonces, la captura quedó vieja y se descarta: apilarla movería
+   *    el punto de retorno más atrás de lo debido y deshacer se comería la
+   *    acción intermedia.
+   *
+   * No alcanza con limpiar al perder el foco: si el campo se rehace por un
+   * re-render, no hay `blur` que lo dispare y la captura quedaría colgada.
+   */
+  let propRev = -1;
+  function propBeginEdit(): void {
+    if (propSnapshot && propRev !== store.historyRev) propSnapshot = null;
+    if (!propSnapshot) {
+      propSnapshot = store.serialize();
+      propRev = store.historyRev;
+    }
+  }
   function propCommit(): void {
-    if (!propSnapshot) return;
-    (store as unknown as { undoStack: ProjectState[] }).undoStack.push(propSnapshot);
-    (store as unknown as { redoStack: ProjectState[] }).redoStack = [];
+    const snap = propSnapshot;
     propSnapshot = null;
-    store.scheduleAutosave();
+    if (snap && propRev === store.historyRev) store.pushUndoState(snap);
   }
   function bindProp(id: string, onInput: () => void): void {
     const el = $(id);
-    el.addEventListener('focus', propFocus);
-    el.addEventListener('input', onInput);
+    el.addEventListener('input', () => { propBeginEdit(); onInput(); });
     el.addEventListener('change', propCommit);
   }
 
@@ -308,12 +346,23 @@ export function initApp(): void {
       const el = $(id) as HTMLInputElement;
       if (document.activeElement !== el) el.value = val;
     };
+    /*
+     * La posición es global y la rotación es relativa al padre. Son marcos
+     * distintos a propósito, y por eso las etiquetas lo dicen.
+     *
+     * Probé mostrar las dos en global y sale peor: al pasar el cuaternión
+     * mundial a ángulos de Euler, una pieza a 30° dentro de un grupo a 90°
+     * —o sea 120° en Y— se lee «-180, 60, -180», que es la misma rotación
+     * escrita de otra forma. Correcto e ilegible. La rotación relativa al
+     * conjunto es además la que uno quiere editar, y es lo que hacen los demás
+     * programas 3D.
+     */
     const wp = obj.getWorldPosition(new THREE.Vector3());
     setIfIdle('prop-px', String(Math.round(wp.x)));
     setIfIdle('prop-py', String(Math.round(wp.y)));
     setIfIdle('prop-pz', String(Math.round(wp.z)));
-    ['x', 'y', 'z'].forEach(ax => {
-      setIfIdle(`prop-r${ax}`, String(Math.round(deg(obj.rotation[ax as 'x' | 'y' | 'z']))));
+    (['x', 'y', 'z'] as const).forEach(ax => {
+      setIfIdle(`prop-r${ax}`, String(Math.round(deg(obj.rotation[ax]))));
     });
 
     if (u.t === 'p') {
@@ -335,7 +384,7 @@ export function initApp(): void {
       $('prop-look').hidden = true;
       dimSig = '';
       const members = store.pieces.filter(p => p.groupId === g.id);
-      const kg = members.reduce((s, p) => s + pieceWeight(p), 0);
+      const kg = totalWeight(members);
       $('sel-name').textContent = g.name;
       $('sel-meta').textContent = `${nPieces(members.length)} · ${kg.toFixed(2)} kg`;
     }
@@ -375,13 +424,9 @@ export function initApp(): void {
         changed = true;
       }
     }
-    if (changed) {
-      store.rebuildPiece(p);
-      renderLists();
-      const [L, A, H] = pieceDims(p);
-      $('sel-meta').textContent = `${L} × ${A} × ${H} mm · ${pieceWeight(p).toFixed(2)} kg`;
-      renderStatus();
-    }
+    // `rebuildPiece` avisa del cambio, y de ahí sale el refresco de las listas,
+    // el inspector y los totales.
+    if (changed) store.rebuildPiece(p);
   }
 
   function applyPosRot(): void {
@@ -389,9 +434,11 @@ export function initApp(): void {
     const obj = store.unitObj(store.sel[0]);
     if (!obj?.parent) return;
     const num = (id: string) => parseFloat(($(id) as HTMLInputElement).value) || 0;
-    const wp = new THREE.Vector3(num('prop-px'), num('prop-py'), num('prop-pz'));
     obj.parent.updateMatrixWorld(true);
-    obj.position.copy(obj.parent.worldToLocal(wp.clone()));
+    // Posición global (se pasa al marco del padre) y rotación relativa,
+    // exactamente el mismo par que muestra `renderInspector`.
+    const wp = new THREE.Vector3(num('prop-px'), num('prop-py'), num('prop-pz'));
+    obj.position.copy(obj.parent.worldToLocal(wp));
     obj.rotation.set(rad(num('prop-rx')), rad(num('prop-ry')), rad(num('prop-rz')));
   }
 
@@ -402,26 +449,15 @@ export function initApp(): void {
     const u = store.sel[0];
     if (u.t === 'p') {
       const p = store.pieceById(u.id);
-      if (p) { p.name = name; p.mesh.name = name; }
+      if (p) store.renamePiece(p, name);
     } else {
       const g = store.groupById(u.id);
-      if (g) g.name = name;
+      if (g) store.renameGroup(g, name);
     }
-    renderLists();
-    $('sel-name').textContent = name;
   }
 
   function applyColor(): void {
-    const col = ($('prop-color') as HTMLInputElement).value;
-    for (const p of store.selectedPieces()) {
-      p.color = col;
-      p.mesh.traverse(c => {
-        if ((c as THREE.Mesh).isMesh) {
-          ((c as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(col);
-        }
-      });
-    }
-    renderLists();
+    store.setPiecesColor(store.selectedPieces(), ($('prop-color') as HTMLInputElement).value);
   }
 
   function applyOpacity(): void {
@@ -444,23 +480,25 @@ export function initApp(): void {
     if (store.sel.length === 0) return;
     store.pushUndo();
     const off = new THREE.Vector3(snapStep() * 5, 0, 0);
-    const next = store.sel.map(u => store.duplicateUnit(u, off));
-    store.setSel(next);
+    // Un solo aviso para toda la tanda: si no, duplicar treinta piezas
+    // rearmaría las listas treinta veces.
+    store.batch(() => store.setSel(store.sel.map(u => store.duplicateUnit(u, off))));
     store.scheduleAutosave();
   }
   function mirrorSelection(axis: 'x' | 'z'): void {
     if (store.sel.length === 0) return;
     store.pushUndo();
-    const next = store.sel.map(u => store.mirrorUnit(u, axis));
-    store.setSel(next);
+    store.batch(() => store.setSel(store.sel.map(u => store.mirrorUnit(u, axis))));
     store.scheduleAutosave();
     toast(t('toast.mirror'));
   }
   function deleteSelection(): void {
     if (store.sel.length === 0) return;
     store.pushUndo();
-    store.deleteUnits(store.sel);
-    store.setSel([]);
+    store.batch(() => {
+      store.deleteUnits(store.sel);
+      store.setSel([]);
+    });
     store.scheduleAutosave();
   }
   function groupSelection(): void {
@@ -470,13 +508,14 @@ export function initApp(): void {
       return;
     }
     store.pushUndo();
-    const oldGids = new Set(list.map(p => p.groupId).filter((x): x is number => x != null));
-    for (const gid of oldGids) {
-      const g = store.groupById(gid);
-      if (g) store.dissolveGroup(g);
-    }
-    const grp = store.groupPieces(list);
-    store.setSel([{ t: 'g', id: grp.id }]);
+    // No hay que disolver los grupos de origen: `groupPieces` se lleva sólo las
+    // piezas seleccionadas y deja al resto donde estaba. Disolverlos, como se
+    // hacía antes, soltaba también a los miembros que nadie había elegido.
+    const grp = store.batch(() => {
+      const g = store.groupPieces(list);
+      store.setSel([{ t: 'g', id: g.id }]);
+      return g;
+    });
     store.scheduleAutosave();
     toast(t('group.created', { name: grp.name, n: list.length }));
   }
@@ -494,11 +533,13 @@ export function initApp(): void {
       return;
     }
     store.pushUndo();
-    for (const gid of gids) {
-      const g = store.groupById(gid);
-      if (g) store.dissolveGroup(g);
-    }
-    store.setSel([]);
+    store.batch(() => {
+      for (const gid of gids) {
+        const g = store.groupById(gid);
+        if (g) store.dissolveGroup(g);
+      }
+      store.setSel([]);
+    });
     store.scheduleAutosave();
   }
 
@@ -517,7 +558,9 @@ export function initApp(): void {
 
   $('arr-ok').addEventListener('click', () => {
     closeModal('modal-array');
-    const count = Math.max(2, parseInt(($('arr-count') as HTMLInputElement).value) || 2);
+    // El `max` del input no frena a quien escribe el número a mano: sin este
+    // techo, pedir 50.000 copias cuelga la pestaña.
+    const count = Math.min(ARRAY_MAX, Math.max(2, parseInt(($('arr-count') as HTMLInputElement).value) || 2));
     const d = new THREE.Vector3(
       parseFloat(($('arr-dx') as HTMLInputElement).value) || 0,
       parseFloat(($('arr-dy') as HTMLInputElement).value) || 0,
@@ -526,26 +569,66 @@ export function initApp(): void {
     if (d.lengthSq() === 0) { toast(t('toast.sepZero')); return; }
     store.pushUndo();
     const base = [...store.sel];
-    const next = [...store.sel];
-    for (let i = 1; i < count; i++) {
-      const off = d.clone().multiplyScalar(i);
-      for (const u of base) next.push(store.duplicateUnit(u, off));
-    }
-    store.setSel(next);
+    store.batch(() => {
+      const next = [...store.sel];
+      for (let i = 1; i < count; i++) {
+        const off = d.clone().multiplyScalar(i);
+        for (const u of base) next.push(store.duplicateUnit(u, off));
+      }
+      store.setSel(next);
+    });
     store.scheduleAutosave();
     toast(t('toast.series', { n: count }));
   });
 
   /* ══ Listas (outliner) ═══════════════════════════════════════ */
+  /**
+   * Marca las filas seleccionadas sin tocar el HTML.
+   *
+   * Antes la clase `selected` se generaba dentro del HTML, así que cada clic
+   * rearmaba las dos listas enteras. El desplazamiento no se perdía —el que
+   * desplaza es el panel, no la lista— pero sí se rehacía trabajo de más y se
+   * destruían los nodos en cada selección.
+   */
+  function syncListSelection(): void {
+    const pieces = new Set(store.selectedPieces().map(p => p.id));
+    const groups = new Set(store.sel.filter(u => u.t === 'g').map(u => u.id));
+    document.querySelectorAll<HTMLElement>('#pieces-list [data-pid]').forEach(el => {
+      el.classList.toggle('selected', pieces.has(Number(el.dataset.pid)));
+    });
+    document.querySelectorAll<HTMLElement>('#groups-list [data-gid]').forEach(el => {
+      el.classList.toggle('selected', groups.has(Number(el.dataset.gid)));
+    });
+  }
+
+  /** Firma de lo que la lista muestra, sin la selección. */
+  function listsSignature(): string {
+    const ps = store.pieces
+      .map(p => `${p.id}|${p.name}|${pieceDims(p).join('x')}|${p.color}|${p.visible ? 1 : 0}|${p.groupId ?? ''}`)
+      .join(';');
+    const gs = store.groups
+      .map(g => `${g.id}|${g.name}|${store.pieces.filter(p => p.groupId === g.id).length}`)
+      .join(';');
+    return `${ps}#${gs}#${getLang()}`;
+  }
+
+  // `null` y no una cadena: ninguna firma real puede coincidir con esto.
+  let listsSig: string | null = null;
   function renderLists(): void {
     $('piece-count').textContent = String(store.pieces.length);
     $('empty-hero').classList.toggle('gone', store.pieces.length > 0);
 
+    const sig = listsSignature();
+    if (sig === listsSig) {
+      syncListSelection();
+      return;
+    }
+    listsSig = sig;
+
     const gl = $('groups-list');
     gl.innerHTML = store.groups.map(g => {
       const n = store.pieces.filter(p => p.groupId === g.id).length;
-      const selCls = store.sel.some(u => u.t === 'g' && u.id === g.id) ? 'selected' : '';
-      return `<div class="group-header ${selCls}" data-gid="${g.id}" role="button" tabindex="0">
+      return `<div class="group-header" data-gid="${g.id}" role="button" tabindex="0">
         <svg aria-hidden="true"><use href="#i-group"/></svg>
         <span class="group-name">${escapeHtml(g.name)}</span>
         <span class="group-count">${n}</span>
@@ -561,12 +644,11 @@ export function initApp(): void {
       const [L, A, H] = pieceDims(p);
       const cls = [
         'piece-item',
-        store.isPieceSelected(p.id) ? 'selected' : '',
         p.groupId != null ? 'grouped' : '',
         !p.visible ? 'hidden-piece' : '',
       ].join(' ');
       return `<div class="${cls}" data-pid="${p.id}" role="button" tabindex="0">
-        <span class="piece-dot" style="background:${p.color}"></span>
+        <span class="piece-dot" style="background:${escapeHtml(p.color)}"></span>
         <span class="piece-info">
           <span class="piece-name">${escapeHtml(p.name)}</span>
           <span class="piece-dims">${L}×${A}×${H}</span>
@@ -577,6 +659,7 @@ export function initApp(): void {
         </button>
       </div>`;
     }).join('');
+    syncListSelection();
   }
 
   $('pieces-list').addEventListener('click', e => {
@@ -585,9 +668,7 @@ export function initApp(): void {
     if (eyeBtn) {
       const p = store.pieceById(Number(eyeBtn.dataset.eye));
       if (p) {
-        p.visible = !p.visible;
-        p.mesh.visible = p.visible;
-        renderLists();
+        store.setPieceVisible(p, !p.visible);
         store.scheduleAutosave();
       }
       return;
@@ -605,10 +686,10 @@ export function initApp(): void {
   });
 
   function renderStatus(): void {
-    const kg = store.pieces.reduce((s, p) => s + pieceWeight(p), 0);
+    const kg = totalWeight(store.pieces);
     $('status-stats').textContent = store.pieces.length === 0
       ? ''
-      : `${nPieces(store.pieces.length)} · ${kg.toFixed(1)} kg`;
+      : `${nPieces(store.pieces.length)} · ${kg.toFixed(2)} kg`;
   }
 
   /* ══ Modales ═════════════════════════════════════════════════ */
@@ -675,7 +756,7 @@ export function initApp(): void {
         const usable = bars.filter(b => !b.over);
         const overs = bars.filter(b => b.over);
         const util = barUtilization(bars, barLen);
-        const nBars = `${usable.length} ${t('w.bar')}${usable.length !== 1 ? 's' : ''}`;
+        const nBars = plural(usable.length, 'w.bar');
         html += `<div class="bom-bars">
           <span class="ok">✂ ${nBars} × ${(barLen / 1000).toFixed(1)} m</span>
           — ${t('bom.util', { p: util.toFixed(0) })}`;
@@ -765,17 +846,24 @@ export function initApp(): void {
   function saveProject(): void {
     if (store.pieces.length === 0) { toast(t('toast.noSave')); return; }
     const json = JSON.stringify(store.serialize(), null, 2);
-    downloadBlob(new Blob([json], { type: 'application/json' }),
-      `ferromadera_${new Date().toISOString().slice(0, 10)}.fmd`);
+    downloadBlob(new Blob([json], { type: 'application/json' }), `ferromadera_${stamp()}.fmd`);
     toast(t('toast.saved'));
   }
   $('btn-save').addEventListener('click', saveProject);
   $('btn-open').addEventListener('click', () => ($('file-input') as HTMLInputElement).click());
+  /** Motivo legible de un fallo al cargar, traducido si el modelo dio una clave. */
+  function loadErrorText(err: unknown): string {
+    if (err instanceof ProjectError) return t(err.key, err.vars);
+    return err instanceof Error ? err.message : String(err);
+  }
   $('file-input').addEventListener('change', e => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
+    // Se limpia siempre: si no, reintentar con el mismo archivo no dispara
+    // `change` y parece que el botón dejó de andar.
+    const listo = (): void => { input.value = ''; };
     reader.onload = ev => {
       try {
         const project = parseProject(String(ev.target?.result));
@@ -784,11 +872,15 @@ export function initApp(): void {
         store.setSel([]);
         viewer.frameView('iso');
         store.scheduleAutosave();
-        toast(t('toast.loaded', { n: store.pieces.length }));
+        toast(t('toast.loaded', { c: nPieces(store.pieces.length) }));
       } catch (err) {
-        toast(t('toast.loadErr', { e: err instanceof Error ? err.message : String(err) }));
+        toast(t('toast.loadErr', { e: loadErrorText(err) }));
       }
-      input.value = '';
+      listo();
+    };
+    reader.onerror = () => {
+      toast(t('toast.loadErr', { e: reader.error?.message ?? t('err.unreadable') }));
+      listo();
     };
     reader.readAsText(file);
   });
@@ -838,13 +930,17 @@ export function initApp(): void {
     const now = Date.now();
     if (now - lastNudge > 1200) store.pushUndo();
     lastNudge = now;
+    // El desplazamiento se pide en ejes mundiales, pero `position` es local:
+    // dentro de un grupo rotado, sumarlo tal cual movía en la dirección
+    // equivocada. Se lleva al marco del padre antes de aplicarlo.
+    const world = new THREE.Vector3(dx, dy, dz);
     for (const u of store.sel) {
       const o = store.unitObj(u);
-      if (o) {
-        o.position.x += dx;
-        o.position.y += dy;
-        o.position.z += dz;
-      }
+      if (!o) continue;
+      o.parent?.updateMatrixWorld(true);
+      const local = world.clone();
+      if (o.parent) local.applyQuaternion(o.parent.getWorldQuaternion(new THREE.Quaternion()).invert());
+      o.position.add(local);
     }
     renderInspector();
     store.scheduleAutosave();
@@ -882,10 +978,25 @@ export function initApp(): void {
   });
 
   /* ══ Arranque ════════════════════════════════════════════════ */
-  store.onChange(() => {
-    renderLists();
+  store.onAutosaveError = () => toast(t('toast.autosaveErr'));
+
+  /*
+   * Único punto donde la interfaz reacciona al store. Antes había dos
+   * mecanismos en paralelo —esta suscripción y llamadas sueltas a `renderLists`
+   * repartidas por el archivo— y funcionaba de casualidad, porque toda acción
+   * terminaba reseleccionando y era ese `setSel` el que redibujaba.
+   *
+   * Un cambio de selección no rearma las listas: sólo mueve marcas.
+   */
+  store.onChange(kinds => {
+    if (kinds.has('structure')) {
+      renderLists();
+      renderStatus();
+      updateLabelsButton(); // cruzar el tope de piezas apaga las etiquetas
+    } else {
+      syncListSelection();
+    }
     renderInspector();
-    renderStatus();
     updateGizmo();
   });
 
@@ -900,13 +1011,79 @@ export function initApp(): void {
 
   if (store.loadAutosave()) {
     viewer.frameView('iso');
-    toast(t('toast.restored', { n: store.pieces.length }));
+    toast(t('toast.restored', { c: nPieces(store.pieces.length) }));
   }
 
-  const animate = () => {
-    requestAnimationFrame(animate);
+  /*
+   * Huella de todo lo que puede cambiar lo que se ve. Si de un cuadro al
+   * siguiente no cambió nada, no hay nada que redibujar: con 60 piezas el par
+   * render + etiquetas cuesta unos 2,7 ms por cuadro, y estando quieto los
+   * gastaba igual, sesenta veces por segundo.
+   *
+   * Se comparan valores, no un resumen: dos estados distintos no pueden
+   * parecer iguales. Y se leen las transformaciones LOCALES, las que muta el
+   * código, no `matrixWorld`, que se recalcula al renderizar y quedaría
+   * congelada justo cuando dejamos de hacerlo.
+   */
+  let huellaPrev: number[] = [];
+  let huella: number[] = [];
+  const hash = (s: string): number => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+    return h >>> 0;
+  };
+
+  function algoCambio(): boolean {
+    const b = huella;
+    b.length = 0;
+    const cam = viewer.camera;
+    b.push(cam.position.x, cam.position.y, cam.position.z,
+      cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w,
+      cam.aspect, cam.fov);
+    const cv = $('overlay') as unknown as HTMLCanvasElement;
+    b.push(cv.width, cv.height);
+    b.push(viewer.grid.visible ? 1 : 0);
+    // El gizmo resalta el eje bajo el cursor sin que cambie nada del modelo.
+    b.push(viewer.gizmo.dragging ? 1 : 0, hash(String(viewer.gizmo.axis)));
+    b.push(overlay.showLabels ? 1 : 0, overlay.measuring ? 1 : 0, overlay.measurePts.length);
+    for (const pt of overlay.measurePts) b.push(pt.x, pt.y, pt.z);
+    b.push(store.sel.length);
+    for (const u of store.sel) b.push(u.t === 'p' ? 1 : 2, u.id);
+    b.push(store.groups.length);
+    for (const g of store.groups) {
+      const o = g.obj;
+      b.push(g.id, o.visible ? 1 : 0, o.position.x, o.position.y, o.position.z,
+        o.quaternion.x, o.quaternion.y, o.quaternion.z, o.quaternion.w);
+    }
+    b.push(store.pieces.length);
+    for (const p of store.pieces) {
+      const o = p.mesh;
+      // `o.id` cambia al reconstruir la malla, que es lo que pasa al editar
+      // las medidas: así entran los cambios de parámetros sin listarlos.
+      b.push(p.id, o.id, p.visible ? 1 : 0, p.opacity, hash(p.name), hash(p.color),
+        o.position.x, o.position.y, o.position.z,
+        o.quaternion.x, o.quaternion.y, o.quaternion.z, o.quaternion.w);
+    }
+    let cambio = b.length !== huellaPrev.length;
+    if (!cambio) {
+      for (let i = 0; i < b.length; i++) {
+        if (b[i] !== huellaPrev[i]) { cambio = true; break; }
+      }
+    }
+    if (cambio) { huella = huellaPrev; huellaPrev = b; }
+    return cambio;
+  }
+
+  /** Un cuadro: mover controles y, sólo si hace falta, dibujar. */
+  const frame = (): void => {
+    viewer.updateControls();
+    if (!algoCambio()) return;
     viewer.render();
     overlay.draw();
+  };
+  const animate = (): void => {
+    requestAnimationFrame(animate);
+    frame();
   };
   animate();
 
@@ -922,6 +1099,8 @@ export function initApp(): void {
       ]);
       (window as unknown as Record<string, unknown>).__fm = {
         store, viewer, overlay, THREE,
+        // Un paso del bucle, para poder accionarlo sin depender de rAF.
+        frame,
         setLang, getLang,
         buildPlansPDF: plans.buildPlansPDF,
         buildMaterialsPDF: bom.buildMaterialsPDF,

@@ -35,12 +35,19 @@ export function calcBOM(pieces: PieceData[]): BomGroup[] {
     }
     g.count++;
     g.totalLen += p.params.L;
-    g.totalArea += (p.params.L * (p.params.w ?? 0)) / 1e6;
+    // Sólo las placas se compran por superficie. Un perfil lineal también
+    // tiene ancho, pero su "área" no significa nada y nadie la lee.
+    if (!g.linear) g.totalArea += (p.params.L * (p.params.w ?? 0)) / 1e6;
     g.weight += pieceWeight(p);
     g.cuts.push(p.params.L);
     g.list.push(p);
   }
   return [...map.values()];
+}
+
+/** Peso total de un conjunto de piezas, en kg. */
+export function totalWeight(pieces: PieceData[]): number {
+  return pieces.reduce((s, p) => s + pieceWeight(p), 0);
 }
 
 export interface Bar {

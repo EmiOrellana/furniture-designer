@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DICT, initLang, setLang, t } from '../src/app/i18n';
+import { DICT, initLang, plural, setLang, t } from '../src/app/i18n';
 import { MAT } from '../src/model/materials';
 import { TEMPLATES } from '../src/app/templates';
 
@@ -32,6 +32,31 @@ describe('i18n', () => {
 
   it('una clave inexistente devuelve la clave (no revienta)', () => {
     expect(t('no.existe')).toBe('no.existe');
+  });
+
+  /**
+   * Regresión: la regla del plural estaba escrita en seis lugares y uno de
+   * ellos —el encabezado del PDF de planos— agregaba la «s» siempre, así que
+   * un proyecto de una sola pieza imprimía "1 pieces".
+   */
+  describe('plural', () => {
+    it('singular y plural en español', () => {
+      setLang('es');
+      expect(plural(1, 'w.piece')).toBe('1 pieza');
+      expect(plural(2, 'w.piece')).toBe('2 piezas');
+      expect(plural(0, 'w.piece')).toBe('0 piezas');
+      expect(plural(1, 'w.bar')).toBe('1 barra');
+      expect(plural(3, 'w.bar')).toBe('3 barras');
+    });
+
+    it('singular y plural en inglés', () => {
+      setLang('en');
+      expect(plural(1, 'w.piece')).toBe('1 piece');
+      expect(plural(2, 'w.piece')).toBe('2 pieces');
+      expect(plural(0, 'w.piece')).toBe('0 pieces');
+      expect(plural(1, 'w.bar')).toBe('1 bar');
+      setLang('es');
+    });
   });
 
   it('el catálogo de materiales referencia claves existentes', () => {

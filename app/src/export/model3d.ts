@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
-import { cloneForExport, stripLines } from '../scene/builders';
+import { cloneForExport, disposeClonedMaterials, stripLines } from '../scene/builders';
 
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -14,7 +14,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-const stamp = () => new Date().toISOString().slice(0, 10);
+/** Fecha de hoy en ISO corto (2026-07-29), para nombres de archivo. */
+export const stamp = (): string => new Date().toISOString().slice(0, 10);
 
 /**
  * Exporta a glTF binario (.glb). La escena se escala de mm a metros,
@@ -32,8 +33,14 @@ export function exportGLB(root: THREE.Object3D): Promise<Blob> {
   return new Promise((resolve, reject) => {
     new GLTFExporter().parse(
       wrapper,
-      result => resolve(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' })),
-      err => reject(err instanceof Error ? err : new Error(String(err))),
+      result => {
+        disposeClonedMaterials(wrapper);
+        resolve(new Blob([result as ArrayBuffer], { type: 'model/gltf-binary' }));
+      },
+      err => {
+        disposeClonedMaterials(wrapper);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
       { binary: true },
     );
   });
@@ -49,7 +56,11 @@ export function exportOBJ(root: THREE.Object3D): string {
   const clone = cloneForExport(root);
   stripLines(clone);
   clone.updateMatrixWorld(true);
-  return new OBJExporter().parse(clone);
+  try {
+    return new OBJExporter().parse(clone);
+  } finally {
+    disposeClonedMaterials(clone);
+  }
 }
 
 export function downloadOBJ(root: THREE.Object3D): void {

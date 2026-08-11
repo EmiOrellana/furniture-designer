@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { jsPDF } from 'jspdf';
 import type { Piece } from '../app/state';
 import type { ViewName } from '../model/types';
-import { pieceDims, pieceWeight } from '../model/materials';
+import { pieceDims } from '../model/materials';
 import { calcBOM } from '../model/bom';
-import { cloneForExport } from '../scene/builders';
-import { downloadBlob } from './model3d';
-import { localeDate, t } from '../app/i18n';
+import { cloneForExport, disposeClonedMaterials } from '../scene/builders';
+import { downloadBlob, stamp } from './model3d';
+import { localeDate, plural, t } from '../app/i18n';
 
 const viewLabel = (v: ViewName): string =>
   t(v === 'front' ? 'pdf.viewFront' : v === 'side' ? 'pdf.viewSide' : 'pdf.viewTop');
@@ -20,6 +20,47 @@ interface RenderedView {
 }
 
 /**
+ * Renderer y escena de exportación, creados una sola vez y reutilizados.
+ *
+ * Antes se construía un `WebGLRenderer` por vista y se lo liberaba con
+ * `dispose()`, que suelta los recursos de Three.js pero **no el contexto
+ * WebGL**. Cada PDF de planos abría tres contextos y el navegador sólo tolera
+ * unos dieciséis: a las seis exportaciones mataba los más viejos, incluido el
+ * del visor principal, que quedaba congelado hasta recargar la página.
+ */
+let exportRenderer: THREE.WebGLRenderer | null = null;
+let exportScene: THREE.Scene | null = null;
+
+function getExportRenderer(W: number, H: number): THREE.WebGLRenderer {
+  // Si el contexto se perdió por otra vía (reinicio del driver), se rehace.
+  if (exportRenderer?.getContext().isContextLost()) {
+    exportRenderer.dispose();
+    exportRenderer = null;
+  }
+  if (!exportRenderer) {
+    exportRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    exportRenderer.setPixelRatio(1);
+  }
+  exportRenderer.setSize(W, H, false);
+  return exportRenderer;
+}
+
+/** Escena fija de exportación: fondo claro, luces y grilla. Sin las piezas. */
+function getExportScene(): THREE.Scene {
+  if (!exportScene) {
+    const s = new THREE.Scene();
+    s.background = new THREE.Color(0xf5f5f0);
+    s.add(new THREE.AmbientLight(0xffffff, 2.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 1.2);
+    dl.position.set(500, 1000, 500);
+    s.add(dl);
+    s.add(new THREE.GridHelper(4000, 80, 0xcccccc, 0xdddddd));
+    exportScene = s;
+  }
+  return exportScene;
+}
+
+/**
  * Renderiza una vista ortográfica sobre fondo claro y dibuja las cotas
  * generales del conjunto encima. Devuelve el canvas listo para componer.
  */
@@ -30,17 +71,8 @@ function renderOrthoView(root: THREE.Object3D, view: ViewName, W: number, H: num
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 500;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(1);
-  renderer.setSize(W, H);
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf5f5f0);
-  scene.add(new THREE.AmbientLight(0xffffff, 2.6));
-  const dl = new THREE.DirectionalLight(0xffffff, 1.2);
-  dl.position.set(500, 1000, 500);
-  scene.add(dl);
-  scene.add(new THREE.GridHelper(4000, 80, 0xcccccc, 0xdddddd));
-  scene.add(exportRoot);
+  const renderer = getExportRenderer(W, H);
+  const scene = getExportScene();
 
   const asp = W / H;
   const oh = maxDim * 0.72;
@@ -56,15 +88,23 @@ function renderOrthoView(root: THREE.Object3D, view: ViewName, W: number, H: num
   }
   cam.lookAt(center);
   cam.updateProjectionMatrix();
-  renderer.render(scene, cam);
 
   // Copiar a canvas 2D y dibujar cotas
   const cv = document.createElement('canvas');
   cv.width = W;
   cv.height = H;
   const ctx = cv.getContext('2d')!;
-  ctx.drawImage(renderer.domElement, 0, 0);
-  renderer.dispose();
+
+  // La escena es compartida: el clon entra sólo para este render y sale
+  // siempre, incluso si falla, o quedaría duplicado en la vista siguiente.
+  scene.add(exportRoot);
+  try {
+    renderer.render(scene, cam);
+    ctx.drawImage(renderer.domElement, 0, 0);
+  } finally {
+    scene.remove(exportRoot);
+    disposeClonedMaterials(exportRoot);
+  }
 
   const proj = (x: number, y: number, z: number) => {
     const v = new THREE.Vector3(x, y, z).project(cam);
@@ -145,8 +185,6 @@ function renderOrthoView(root: THREE.Object3D, view: ViewName, W: number, H: num
   return { canvas: cv, labelH, labelV };
 }
 
-const stamp = () => new Date().toISOString().slice(0, 10);
-
 /* ── PNG ─────────────────────────────────────────────────────── */
 
 export function exportViewPNG(root: THREE.Object3D, pieces: Piece[], view: ViewName): void {
@@ -178,7 +216,7 @@ export function exportViewPNG(root: THREE.Object3D, pieces: Piece[], view: ViewN
   ctx.fillText(`FERROMADERA — ${viewLabel(view)}`, 14 * S, 30 * S);
   ctx.fillStyle = '#9aa';
   ctx.font = `${Math.round(11 * S)}px 'JetBrains Mono', monospace`;
-  ctx.fillText(`${pieces.length} ${t('w.piece')}${pieces.length !== 1 ? 's' : ''}  |  ${localeDate()}  |  ${t('pdf.unit')}`, 14 * S, 48 * S);
+  ctx.fillText(`${plural(pieces.length, 'w.piece')}  |  ${localeDate()}  |  ${t('pdf.unit')}`, 14 * S, 48 * S);
   ctx.drawImage(viewCanvas, 0, HEADER_H);
 
   // Tabla lateral
@@ -261,7 +299,7 @@ export function buildPlansPDF(root: THREE.Object3D, pieces: Piece[]): jsPDF {
     doc.setTextColor(150, 150, 150);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text(`${localeDate()}  ·  ${pieces.length} ${t('w.piece')}s  ·  ${t('pdf.unit')}`, PW - M, 22, { align: 'right' });
+    doc.text(`${localeDate()}  ·  ${plural(pieces.length, 'w.piece')}  ·  ${t('pdf.unit')}`, PW - M, 22, { align: 'right' });
     doc.setFillColor(22, 24, 27);
     doc.rect(0, PH - FOOTER, PW, FOOTER, 'F');
     doc.setTextColor(150, 150, 150);
@@ -313,7 +351,7 @@ export function buildPlansPDF(root: THREE.Object3D, pieces: Piece[]): jsPDF {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(90, 90, 90);
     const qty = g.linear ? `${(g.totalLen / 1000).toFixed(2)} m` : `${g.totalArea.toFixed(3)} m²`;
-    doc.text(`${g.count} ${t('w.piece')}${g.count !== 1 ? 's' : ''}  ·  ${qty}  ·  ${g.weight.toFixed(1)} kg`, mx + 8, y);
+    doc.text(`${plural(g.count, 'w.piece')}  ·  ${qty}  ·  ${g.weight.toFixed(2)} kg`, mx + 8, y);
     y += 15;
     if (y > PH - FOOTER - 30) break;
   }
@@ -321,14 +359,10 @@ export function buildPlansPDF(root: THREE.Object3D, pieces: Piece[]): jsPDF {
   doc.setTextColor(240, 123, 38);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text(t('pdf.totalWeight', { kg: totalW.toFixed(1) }), mx, y);
+  doc.text(t('pdf.totalWeight', { kg: totalW.toFixed(2) }), mx, y);
   return doc;
 }
 
 export function exportPlansPDF(root: THREE.Object3D, pieces: Piece[]): void {
   buildPlansPDF(root, pieces).save(`ferromadera_planos_${stamp()}.pdf`);
-}
-
-export function totalWeight(pieces: Piece[]): number {
-  return pieces.reduce((s, p) => s + pieceWeight(p), 0);
 }

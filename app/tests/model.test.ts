@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAT, defaultParams, pieceDims, pieceWeight, profileStr, sectionArea } from '../src/model/materials';
-import { barUtilization, calcBOM, packBars } from '../src/model/bom';
-import { convertV2, normalizeV3, parseProject } from '../src/model/serialize';
+import { barUtilization, calcBOM, packBars, totalWeight } from '../src/model/bom';
+import { ProjectError, convertV2, normalizeV3, parseProject } from '../src/model/serialize';
 import type { PieceData, ProjectState } from '../src/model/types';
 
 const piece = (over: Partial<PieceData> = {}): PieceData => ({
@@ -77,6 +77,24 @@ describe('BOM', () => {
     expect(wood.totalArea).toBeCloseTo(0.72, 5);
   });
 
+  /** El ancho de un perfil lineal no es una superficie a comprar. */
+  it('no acumula superficie para los perfiles lineales', () => {
+    const bom = calcBOM([
+      piece({ id: 1, type: 'tube_rect', params: { L: 1000, w: 40, h: 20, e: 1.6 } }),
+      piece({ id: 2, type: 'flat', params: { L: 800, w: 30, e: 4 } }),
+      piece({ id: 3, type: 'wood', params: { L: 1000, w: 500, e: 18 } }),
+    ]);
+    for (const g of bom.filter(x => x.linear)) expect(g.totalArea, g.prof).toBe(0);
+    expect(bom.find(g => g.type === 'wood')!.totalArea).toBeCloseTo(0.5, 5);
+  });
+
+  it('totalWeight suma el peso de las piezas', () => {
+    const pieces = [piece({ id: 1 }), piece({ id: 2, params: { L: 500, a: 30, e: 1.6 } })];
+    const esperado = pieceWeight(pieces[0]) + pieceWeight(pieces[1]);
+    expect(totalWeight(pieces)).toBeCloseTo(esperado, 6);
+    expect(totalWeight([])).toBe(0);
+  });
+
   it('packBars: first-fit decreasing con kerf', () => {
     const bars = packBars([2000, 2000, 2000], 6000, 3);
     // 2000 + 3 + 2000 + 3 + 2000 = 6006 > 6000 → 2 barras
@@ -113,7 +131,120 @@ describe('serialización', () => {
     expect(clean.pieces).toHaveLength(1);
     expect(clean.pieces[0].groupId).toBeNull(); // grupo 99 no existe
     expect(clean.idCounter).toBe(7);
-    expect(clean.groups[0].name).toBe('Grupo 1');
+    // Marcador sin idioma: el modelo no traduce. Antes decía "Grupo 1", con el
+    // español metido en la capa que debía ser neutra.
+    expect(clean.groups[0].name).toBe('G1');
+  });
+
+  /**
+   * Regresión: el relleno del nombre usaba `MAT[type].label`, que es una CLAVE
+   * de i18n, así que una pieza sin nombre salía llamada "mat.tube_square #3".
+   */
+  it('una pieza sin nombre recibe uno legible, no una clave de i18n', () => {
+    const clean = normalizeV3({
+      version: 3, idCounter: 0, groupCounter: 0, groups: [],
+      pieces: [{ id: 3, type: 'tube_square', params: { L: 500, a: 30, e: 1.6 } }],
+    } as unknown as ProjectState);
+    expect(clean.pieces[0].name).toBe('30×30×1.6 #3');
+    expect(clean.pieces[0].name).not.toContain('mat.');
+  });
+
+  /**
+   * Regresión: el color se interpolaba crudo en un atributo `style`, y nada
+   * validaba su formato al cargar el archivo.
+   */
+  it('descarta colores que no son hexadecimales', () => {
+    const clean = normalizeV3({
+      version: 3, idCounter: 0, groupCounter: 0, groups: [],
+      pieces: [
+        { id: 1, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, color: '" onload="alert(1)' },
+        { id: 2, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, color: 'red' },
+        { id: 3, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, color: '#A1b2C3' },
+        { id: 4, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, color: '#555' },
+      ],
+    } as unknown as ProjectState);
+    expect(clean.pieces[0].color).toBe(MAT.tube_square.color);
+    expect(clean.pieces[1].color).toBe(MAT.tube_square.color);
+    expect(clean.pieces[2].color).toBe('#A1b2C3'); // hex de 6, se respeta
+    expect(clean.pieces[3].color).toBe('#555');    // hex de 3, también válido
+  });
+
+  it('reemplaza parámetros no numéricos por los del catálogo', () => {
+    const clean = normalizeV3({
+      version: 3, idCounter: 0, groupCounter: 0, groups: [],
+      pieces: [{
+        id: 1, type: 'tube_square',
+        params: { L: 500, a: 'x" onload="1', e: NaN, basura: 9 },
+      }],
+    } as unknown as ProjectState);
+    expect(clean.pieces[0].params).toEqual({ L: 500, a: 30, e: 1.6 });
+    expect(clean.pieces[0].params.basura).toBeUndefined(); // claves ajenas fuera
+  });
+
+  it('las coordenadas inválidas quedan en cero, no en NaN', () => {
+    const clean = normalizeV3({
+      version: 3, idCounter: 0, groupCounter: 0, groups: [],
+      pieces: [{
+        id: 1, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 },
+        pos: { x: 'abc', y: 50, z: null }, rot: undefined,
+      }],
+    } as unknown as ProjectState);
+    expect(clean.pieces[0].pos).toEqual({ x: 0, y: 50, z: 0 });
+    expect(clean.pieces[0].rot).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('acota la opacidad al rango 0–1', () => {
+    const clean = normalizeV3({
+      version: 3, idCounter: 0, groupCounter: 0, groups: [],
+      pieces: [
+        { id: 1, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, opacity: 5 },
+        { id: 2, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, opacity: -2 },
+        { id: 3, type: 'tube_square', params: { L: 100, a: 30, e: 1.6 }, opacity: 'x' },
+      ],
+    } as unknown as ProjectState);
+    expect(clean.pieces.map(p => p.opacity)).toEqual([1, 0, 0]);
+  });
+
+  /**
+   * Regresión: cualquier versión distinta de 3 caía en el conversor de v2. Un
+   * archivo de un formato futuro se procesaría como legado y saldría destrozado
+   * sin que nadie se entere.
+   */
+  describe('versiones de archivo', () => {
+    const proyecto = (version?: number) => JSON.stringify({
+      version, idCounter: 1, groupCounter: 0, groups: [],
+      pieces: [{ id: 1, type: 'tube_square', params: { L: 500, a: 30, e: 1.6 },
+        pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 } }],
+    });
+
+    it('acepta la v3', () => {
+      expect(parseProject(proyecto(3)).pieces).toHaveLength(1);
+    });
+
+    it('rechaza una versión más nueva en vez de convertirla', () => {
+      expect(() => parseProject(proyecto(4))).toThrow(ProjectError);
+      try {
+        parseProject(proyecto(9));
+      } catch (e) {
+        expect((e as ProjectError).key).toBe('err.futureVersion');
+        expect((e as ProjectError).vars).toEqual({ v: 9 });
+      }
+    });
+
+    it('sin versión se trata como legado', () => {
+      // La v2 no siempre escribía el campo; ahí el conversor sí corresponde.
+      expect(() => parseProject(proyecto(undefined))).not.toThrow();
+    });
+
+    it('lo que no es un proyecto da una clave traducible, no texto fijo', () => {
+      try {
+        parseProject('{"algo":1}');
+        expect.unreachable();
+      } catch (e) {
+        expect(e).toBeInstanceOf(ProjectError);
+        expect((e as ProjectError).key).toBe('err.notProject');
+      }
+    });
   });
 
   it('convertV2 hornea la escala en los parámetros', () => {
@@ -139,15 +270,6 @@ describe('serialización', () => {
     expect(v3.pieces[1].opacity).toBe(0.5);
     expect(v3.pieces[0].groupId).toBe(1);
     expect(v3.groups).toHaveLength(1);
-  });
-
-  it('parseProject acepta v3 y v2, rechaza basura', () => {
-    const v3: ProjectState = {
-      version: 3, idCounter: 1, groupCounter: 0, groups: [],
-      pieces: [{ ...piece(), pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 } }],
-    };
-    expect(parseProject(JSON.stringify(v3)).pieces).toHaveLength(1);
-    expect(() => parseProject('{"cosa": true}')).toThrow();
   });
 
   it('round-trip v3: serializar → parsear conserva datos', () => {

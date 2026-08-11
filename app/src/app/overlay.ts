@@ -3,6 +3,12 @@ import type { Store } from './state';
 import type { Viewer } from '../scene/viewer';
 import { pieceDims } from '../model/materials';
 
+/**
+ * Tope de piezas con etiqueta. Más arriba se superponen tanto que dejan de
+ * leerse y cuestan un cuadro entero, así que se apagan.
+ */
+export const LABEL_LIMIT = 60;
+
 /** Capa 2D sobre el viewport: etiquetas de piezas y herramienta de medición. */
 export class Overlay {
   showLabels = true;
@@ -10,6 +16,16 @@ export class Overlay {
   measurePts: THREE.Vector3[] = [];
 
   private ctx: CanvasRenderingContext2D;
+  /**
+   * Ancho medido de las dos líneas de cada etiqueta, mientras su texto no
+   * cambie. Medir texto es la mitad del costo de dibujar las etiquetas, y el
+   * texto sólo cambia al renombrar o remedir la pieza.
+   */
+  private labelWidths = new Map<number, { sig: string; w1: number; w2: number }>();
+
+  /** Medidas en píxeles de CSS, que es en las que se dibuja y se proyecta. */
+  private cssW = 0;
+  private cssH = 0;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -17,19 +33,36 @@ export class Overlay {
     private store: Store,
   ) {
     this.ctx = canvas.getContext('2d')!;
-    const fit = () => {
-      const parent = canvas.parentElement!;
-      canvas.width = parent.clientWidth;
-      canvas.height = parent.clientHeight;
-    };
-    window.addEventListener('resize', fit);
-    fit();
+    // `ResizeObserver` y no el `resize` de la ventana: el contenedor puede
+    // cambiar de tamaño sin que la ventana lo haga, y —más importante— al
+    // construirse todavía puede no tener medidas. Con el evento de ventana, un
+    // canvas que nacía en cero se quedaba en cero hasta que alguien
+    // redimensionara; el observador avisa apenas hay layout.
+    new ResizeObserver(() => this.fit()).observe(canvas.parentElement!);
+    // El observador no ve los cambios de densidad: mover la ventana a un
+    // monitor con otro escalado cambia `devicePixelRatio` sin cambiar el
+    // tamaño en CSS. Eso sí llega como `resize` de ventana.
+    window.addEventListener('resize', () => this.fit());
+    this.fit();
   }
 
-  resize(): void {
+  /**
+   * Ajusta el canvas al contenedor con la densidad real de la pantalla.
+   *
+   * El canvas de WebGL de al lado ya usa `devicePixelRatio`; este no, así que
+   * en pantallas de alta densidad las etiquetas y las cotas se veían borrosas
+   * al lado de un modelo nítido. El respaldo pasa a tener más píxeles y la
+   * transformación deja que el resto del código siga midiendo en CSS.
+   */
+  private fit(): void {
     const parent = this.canvas.parentElement!;
-    this.canvas.width = parent.clientWidth;
-    this.canvas.height = parent.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    this.cssW = parent.clientWidth;
+    this.cssH = parent.clientHeight;
+    this.canvas.width = Math.round(this.cssW * dpr);
+    this.canvas.height = Math.round(this.cssH * dpr);
+    // Cambiar el tamaño reinicia el estado del contexto: la escala va después.
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   addMeasurePoint(pt: THREE.Vector3): void {
@@ -52,8 +85,8 @@ export class Overlay {
 
   draw(): void {
     const c = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.cssW;
+    const h = this.cssH;
     c.clearRect(0, 0, w, h);
     this.drawMeasure(w, h);
     this.drawLabels(w, h);
@@ -111,10 +144,13 @@ export class Overlay {
 
   private drawLabels(w: number, h: number): void {
     const pieces = this.store.pieces;
-    if (!this.showLabels || pieces.length === 0 || pieces.length > 60) return;
+    if (!this.showLabels || pieces.length === 0 || pieces.length > LABEL_LIMIT) return;
     const c = this.ctx;
     const box = new THREE.Box3();
     const center = new THREE.Vector3();
+    // Una vez por cuadro, no una consulta por pieza.
+    const selectedIds = new Set(this.store.selectedPieces().map(p => p.id));
+    if (this.labelWidths.size > 200) this.labelWidths.clear(); // piezas ya borradas
     for (const p of pieces) {
       if (!p.visible) continue;
       box.setFromObject(p.mesh);
@@ -123,15 +159,25 @@ export class Overlay {
       if (pt.behind || pt.x < 0 || pt.x > w || pt.y < 0 || pt.y > h) continue;
 
       const [L, A, H] = pieceDims(p);
-      const selected = this.store.isPieceSelected(p.id);
+      const selected = selectedIds.has(p.id);
       const line1 = p.name;
       const line2 = `${L}×${A}×${H}`;
       const fs = 11, pad = 6, lh = fs + 3;
-      c.font = `500 ${fs}px 'Inter', sans-serif`;
-      const w1 = c.measureText(line1).width;
-      c.font = `${fs - 1}px 'JetBrains Mono', monospace`;
-      const w2 = c.measureText(line2).width;
-      const bw = Math.max(w1, w2) + pad * 2;
+      // Separador que no puede aparecer en un nombre ni en las medidas.
+      const sig = `${line1}\u0000${line2}`;
+      let medida = this.labelWidths.get(p.id);
+      if (medida?.sig !== sig) {
+        // Se mide con la misma tipografía con la que después se dibuja: antes
+        // se medía en peso 500 y se pintaba en 600, así que la caja quedaba
+        // apenas angosta.
+        c.font = `600 ${fs}px 'Inter', sans-serif`;
+        const w1 = c.measureText(line1).width;
+        c.font = `${fs - 1}px 'JetBrains Mono', monospace`;
+        const w2 = c.measureText(line2).width;
+        medida = { sig, w1, w2 };
+        this.labelWidths.set(p.id, medida);
+      }
+      const bw = Math.max(medida.w1, medida.w2) + pad * 2;
       const bh = 2 * lh + pad * 2 - 3;
       let bx = pt.x - bw / 2;
       let by = pt.y - bh - 12;

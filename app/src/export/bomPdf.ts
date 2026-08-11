@@ -2,8 +2,8 @@ import { jsPDF } from 'jspdf';
 import type { PieceData } from '../model/types';
 import { pieceWeight } from '../model/materials';
 import { calcBOM, packBars } from '../model/bom';
-import { downloadBlob } from './model3d';
-import { localeDate, t } from '../app/i18n';
+import { downloadBlob, stamp } from './model3d';
+import { localeDate, plural, t } from '../app/i18n';
 
 export interface BomPdfOptions {
   barLen: number;
@@ -51,7 +51,7 @@ export function buildMaterialsPDF(pieces: PieceData[], opts: BomPdfOptions): Blo
   doc.setTextColor(150, 150, 150);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text(t('pdf.bomMeta', { date, n: pieces.length, bar: barLen, kerf }), M, 47);
+  doc.text(t('pdf.bomMeta', { date, c: plural(pieces.length, 'w.piece'), bar: barLen, kerf }), M, 47);
   y = 86;
 
   let totalWeight = 0;
@@ -107,7 +107,7 @@ export function buildMaterialsPDF(pieces: PieceData[], opts: BomPdfOptions): Blo
     doc.setTextColor(196, 90, 16);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text(t('pdf.total', { n: g.count, w: `${t('w.piece')}${g.count !== 1 ? 's' : ''}` }), M + 6, y + 1);
+    doc.text(t('pdf.total', { c: plural(g.count, 'w.piece') }), M + 6, y + 1);
     const qty = g.linear ? `${(g.totalLen / 1000).toFixed(2)} m` : `${g.totalArea.toFixed(3)} m²`;
     doc.text(qty, M + CW * 0.55, y + 1, { align: 'right' });
     doc.text(`${g.weight.toFixed(2)} kg`, M + CW * 0.72, y + 1, { align: 'right' });
@@ -170,5 +170,5 @@ export function buildMaterialsPDF(pieces: PieceData[], opts: BomPdfOptions): Blo
 
 export function downloadMaterialsPDF(pieces: PieceData[], opts: BomPdfOptions): void {
   const blob = buildMaterialsPDF(pieces, opts);
-  downloadBlob(blob, `ferromadera_materiales_${new Date().toISOString().slice(0, 10)}.pdf`);
+  downloadBlob(blob, `ferromadera_materiales_${stamp()}.pdf`);
 }

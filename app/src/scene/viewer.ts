@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { visibleMeshes } from './builders';
 
 export type GizmoMode = 'select' | 'move' | 'rotate';
 
@@ -114,6 +115,12 @@ export class Viewer {
       events.onPick(e);
     });
 
+    // Mismo motivo que en el overlay: si el contenedor todavía no tiene
+    // medidas al construirse, el lienzo nacía de 1×1 y sólo un cambio de
+    // tamaño de ventana lo arreglaba. El observador avisa apenas hay layout.
+    new ResizeObserver(() => this.resize()).observe(container);
+    // El observador no ve los cambios de densidad de pantalla; ésos llegan
+    // como `resize` de ventana.
     window.addEventListener('resize', () => this.resize());
     this.resize();
   }
@@ -121,6 +128,8 @@ export class Viewer {
   resize(): void {
     const w = this.container.clientWidth || 1;
     const h = this.container.clientHeight || 1;
+    // La densidad puede cambiar al mover la ventana entre monitores.
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -136,11 +145,7 @@ export class Viewer {
   /** Devuelve el pieceId golpeado por el rayo, o null. */
   pickPieceId(e: { clientX: number; clientY: number }): number | null {
     this.castFrom(e);
-    const meshes: THREE.Object3D[] = [];
-    this.root.traverse(c => {
-      if ((c as THREE.Mesh).isMesh && c.visible) meshes.push(c);
-    });
-    const hits = this.raycaster.intersectObjects(meshes, false);
+    const hits = this.raycaster.intersectObjects(visibleMeshes(this.root), false);
     for (const h of hits) {
       let o: THREE.Object3D | null = h.object;
       while (o && o.userData.pieceId === undefined) o = o.parent;
@@ -152,11 +157,7 @@ export class Viewer {
   /** Punto 3D bajo el cursor: sobre una pieza o sobre el plano del piso. */
   pickPoint(e: { clientX: number; clientY: number }): THREE.Vector3 | null {
     this.castFrom(e);
-    const meshes: THREE.Object3D[] = [];
-    this.root.traverse(c => {
-      if ((c as THREE.Mesh).isMesh && c.visible) meshes.push(c);
-    });
-    const hits = this.raycaster.intersectObjects(meshes, false);
+    const hits = this.raycaster.intersectObjects(visibleMeshes(this.root), false);
     if (hits.length > 0) return hits[0].point.clone();
     const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const pt = new THREE.Vector3();
@@ -177,14 +178,17 @@ export class Viewer {
     this.gizmo.setRotationSnap(on ? THREE.MathUtils.degToRad(15) : null);
   }
 
-  /** Caja envolvente de las piezas visibles (o un valor por defecto). */
+  /**
+   * Caja envolvente de las piezas visibles (o un valor por defecto).
+   *
+   * Antes miraba `visible` sólo en el primer nivel, así que una pieza oculta
+   * dentro de un grupo visible seguía inflando el encuadre.
+   */
   contentBox(): THREE.Box3 {
     const box = new THREE.Box3();
-    let any = false;
-    for (const child of this.root.children) {
-      if (child.visible) { box.expandByObject(child); any = true; }
-    }
-    if (!any) box.set(new THREE.Vector3(-500, 0, -500), new THREE.Vector3(500, 800, 500));
+    const meshes = visibleMeshes(this.root);
+    for (const m of meshes) box.expandByObject(m);
+    if (meshes.length === 0) box.set(new THREE.Vector3(-500, 0, -500), new THREE.Vector3(500, 800, 500));
     return box;
   }
 
@@ -214,8 +218,15 @@ export class Viewer {
     this.orbit.update();
   }
 
-  render(): void {
+  /**
+   * Avanza el amortiguado de la órbita. Tiene que correr en todos los cuadros,
+   * incluso en los que no se dibuja, o el deslizamiento de la cámara se corta.
+   */
+  updateControls(): void {
     this.orbit.update();
+  }
+
+  render(): void {
     this.renderer.render(this.scene, this.camera);
   }
 }

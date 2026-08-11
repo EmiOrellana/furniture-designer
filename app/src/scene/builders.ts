@@ -107,6 +107,62 @@ export function buildPieceMesh(p: PieceData): THREE.Object3D {
   return root;
 }
 
+/**
+ * Mallas realmente visibles dentro de `root`, incluido `root` si lo es.
+ *
+ * No alcanza con filtrar por `mesh.visible`: ocultar una pieza apaga sólo su
+ * objeto raíz, y en los perfiles compuestos —el ángulo son dos alas— las
+ * mallas hijas quedan con `visible = true`. Acá se poda el descenso, así que un
+ * subárbol apagado no aporta nada.
+ *
+ * Lo usan el lanzado de rayos, que de otro modo dejaba seleccionar piezas
+ * ocultas, y el encuadre, que de otro modo dejaba aire por algo que no se ve.
+ */
+export function visibleMeshes(root: THREE.Object3D): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  const walk = (o: THREE.Object3D): void => {
+    if (!o.visible) return;
+    if ((o as THREE.Mesh).isMesh) out.push(o);
+    for (const c of o.children) walk(c);
+  };
+  walk(root);
+  return out;
+}
+
+/**
+ * Refleja un objeto respecto del plano x=0 o z=0, dejándolo con una rotación
+ * válida.
+ *
+ * Una reflexión pura invierte la orientación del espacio y no se puede
+ * representar sin escala negativa — y acá la geometría se reconstruye desde los
+ * parámetros, nunca se escala. El truco es componerla con un volteo local sobre
+ * el eje X: toda pieza es una extrusión centrada en el origen a lo largo de X,
+ * así que ese volteo la deja idéntica, y el producto de dos reflexiones sí es
+ * una rotación.
+ *
+ * Un grupo se trata distinto: su rotación se conjuga con la reflexión
+ * (R' = S·R·S) y cada miembro se refleja dentro del marco local del grupo.
+ *
+ * Antes se negaban dos ángulos de Euler. Eso coincide con el resultado correcto
+ * sólo cuando la pieza gira sobre un único eje; con rotaciones compuestas daba
+ * una orientación equivocada.
+ */
+export function mirrorObject(obj: THREE.Object3D, axis: 'x' | 'z'): void {
+  const S = new THREE.Matrix4().makeScale(axis === 'x' ? -1 : 1, 1, axis === 'z' ? -1 : 1);
+  const flipLocalX = new THREE.Matrix4().makeScale(-1, 1, 1);
+  const apply = (o: THREE.Object3D, second: THREE.Matrix4): void => {
+    o.position.applyMatrix4(S);
+    const m = new THREE.Matrix4().makeRotationFromQuaternion(o.quaternion);
+    o.quaternion.setFromRotationMatrix(m.premultiply(S).multiply(second));
+  };
+  if (obj.userData.pieceId !== undefined) {
+    apply(obj, flipLocalX);
+    return;
+  }
+  apply(obj, S);
+  for (const child of obj.children) apply(child, flipLocalX);
+}
+
 /** Libera geometrías y materiales de un subárbol. */
 export function disposeObject(obj: THREE.Object3D): void {
   obj.traverse(c => {
@@ -152,11 +208,35 @@ export function cloneForExport(root: THREE.Object3D): THREE.Object3D {
   return clone;
 }
 
-/** Quita las líneas de borde de un subárbol (para exportar solo mallas). */
+/**
+ * Libera los materiales de un clon de exportación, y **sólo** los materiales.
+ *
+ * `cloneForExport` duplica los materiales pero comparte las geometrías con la
+ * escena viva: liberarlas dejaría el visor en negro. Sin esto, cada exportación
+ * y cada vista de los planos dejaba materiales sin liberar.
+ */
+export function disposeClonedMaterials(root: THREE.Object3D): void {
+  root.traverse(c => {
+    const m = (c as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+    if (m) (Array.isArray(m) ? m : [m]).forEach(x => x.dispose());
+  });
+}
+
+/**
+ * Quita las líneas de borde de un subárbol (para exportar solo mallas).
+ *
+ * Se usa siempre sobre un clon de `cloneForExport`, así que libera el material
+ * de lo que saca: al quedar fuera del árbol, `disposeClonedMaterials` ya no lo
+ * alcanzaría. La geometría no se toca, que es compartida con la escena viva.
+ */
 export function stripLines(root: THREE.Object3D): void {
   const toRemove: THREE.Object3D[] = [];
   root.traverse(c => {
     if ((c as THREE.Line).isLine || (c as THREE.LineSegments).isLineSegments) toRemove.push(c);
   });
-  for (const c of toRemove) c.parent?.remove(c);
+  for (const c of toRemove) {
+    const m = (c as THREE.Line).material as THREE.Material | THREE.Material[] | undefined;
+    if (m) (Array.isArray(m) ? m : [m]).forEach(x => x.dispose());
+    c.parent?.remove(c);
+  }
 }

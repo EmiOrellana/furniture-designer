@@ -7,6 +7,11 @@ dist/
 # Vercel
 .vercel
 
+# Playwright: informes y trazas de las pruebas de punta a punta
+app/test-results/
+app/playwright-report/
+app/blob-report/
+
 # Ajustes locales de Claude Code (launch.json sí se versiona)
 .claude/settings.local.json
 
