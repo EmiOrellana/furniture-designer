@@ -4,7 +4,7 @@
 
 # FerroMadera
 
-**A 3D furniture designer built for the workshop — not just the screen.**
+**A 3D furniture designer built for the workshop, not just the screen.**
 
 Design steel and wood furniture in the browser, then walk to the bench with
 optimized cut lists, weight and cost estimates, and dimensioned technical drawings.
@@ -38,30 +38,30 @@ means; the **cut list, the bill of materials and the technical drawings are the 
 
 ### Design
 
-- **Profile catalog** — square / rectangular / round structural tube, angle iron,
+- **Profile catalog**: square / rectangular / round structural tube, angle iron,
   flat bar and wood boards, each defined by its real commercial parameters
   (profile, wall thickness, length).
-- **Pro-grade 3D editing** — translate/rotate gizmos with grid and 15° snapping,
+- **Pro-grade 3D editing**: translate/rotate gizmos with grid and 15° snapping,
   multi-select, groups, mirror copies, linear arrays, point-to-point measuring,
   per-piece visibility and live dimension labels.
-- **Parametric templates** — generate a complete table or shelving unit from a
+- **Parametric templates**: generate a complete table or shelving unit from a
   handful of measurements, then tweak any piece freely.
-- **Fully custom by design** — nothing is locked to a template: every piece can be
+- **Fully custom by design**: nothing is locked to a template. Every piece can be
   moved, rotated, resized, recolored and renamed at will.
 
 ### Fabricate
 
-- **Cut-list optimization** — first-fit-decreasing bin packing distributes every
+- **Cut-list optimization**: first-fit-decreasing bin packing distributes every
   cut across commercial stock bars (configurable length and kerf), reporting bars
   needed, per-bar layout, leftovers and utilization percentage.
-- **Weight and cost** — real cross-section math (tube walls included) gives kg per
+- **Weight and cost**: real cross-section math (tube walls included) gives kg per
   piece and per profile; optional prices per metre / m² produce a cost estimate.
-- **Technical drawings** — 2-page PDF with three dimensioned orthographic views
+- **Technical drawings**: 2-page PDF with three dimensioned orthographic views
   plus a bill of materials, generated entirely client-side.
 
 ### Share
 
-- **`.glb` export** at real-world scale (metres) — drops straight into Blender
+- **`.glb` export** at real-world scale (metres). Drops straight into Blender
   with piece names and colors intact. `.obj` export (mm) for CAD workflows.
 - **PNG views** with overall dimensions and a fabrication table.
 - **Project files** (`.fmd`, plain JSON) plus silent autosave in the browser.
@@ -69,8 +69,8 @@ means; the **cut list, the bill of materials and the technical drawings are the 
 <div align="center">
 <table>
   <tr>
-    <td align="center"><img src="landing/assets/plans-pdf.png" alt="Technical drawings PDF" width="420"><br><sub>Technical drawings — dimensioned orthographic views</sub></td>
-    <td align="center"><img src="landing/assets/bom-pdf.png" alt="Bill of materials PDF" width="300"><br><sub>Bill of materials — cuts, bars, weight and cost</sub></td>
+    <td align="center"><img src="landing/assets/plans-pdf.png" alt="Technical drawings PDF" width="420"><br><sub>Technical drawings: dimensioned orthographic views</sub></td>
+    <td align="center"><img src="landing/assets/bom-pdf.png" alt="Bill of materials PDF" width="300"><br><sub>Bill of materials: cuts, bars, weight and cost</sub></td>
   </tr>
 </table>
 </div>
@@ -85,7 +85,7 @@ means; the **cut list, the bill of materials and the technical drawings are the 
 
 ## Quick start
 
-**Just use it** — grab the built `app/dist/index.html`. It is the entire
+**Just use it**: grab the built `app/dist/index.html`. It is the entire
 application in a single file: double-click it, or host it anywhere static.
 No install, no account, no backend.
 
@@ -104,7 +104,7 @@ npm run build           # build app + assemble dist/ (used by Vercel)
 `/app`, so the landing's **Start** button actually opens the app. The other
 servers each show one half of the site in isolation.
 
-The landing needs no compilation — it is static files the browser reads as-is.
+The landing needs no compilation: it is static files the browser reads as-is.
 The app does, because it is TypeScript split across modules.
 
 ## Deploy
@@ -124,17 +124,17 @@ Result: `yourdomain.com` serves the landing, `yourdomain.com/app` opens the app.
 ## Architecture
 
 The core principle: **fabrication parameters are the single source of truth**.
-Geometry is always *rebuilt* from `params` — meshes are never scaled — so undo,
+Geometry is always *rebuilt* from `params`, and meshes are never scaled, so undo,
 autosave, BOM math and every export stay consistent by construction.
 
 ```mermaid
 flowchart LR
-    subgraph model["app/src/model — pure domain (zero DOM / zero Three.js)"]
+    subgraph model["app/src/model: pure domain (zero DOM / zero Three.js)"]
         MAT[materials.ts<br/>catalog · sections · weights]
         BOM[bom.ts<br/>BOM · bar packing]
         SER[serialize.ts<br/>.fmd v3 · v2 import]
     end
-    subgraph scene["app/src/scene — Three.js layer"]
+    subgraph scene["app/src/scene: Three.js layer"]
         BLD[builders.ts<br/>params → geometry]
         VWR[viewer.ts<br/>camera · gizmos · picking]
     end
@@ -157,7 +157,7 @@ flowchart LR
 
 | Layer | Responsibility | Dependencies |
 |---|---|---|
-| `app/src/model/` | Domain types, section math, weights, BOM, bar packing, serialization | **none** — runs in Node, fully unit-tested |
+| `app/src/model/` | Domain types, section math, weights, BOM, bar packing, serialization | **none**. Runs in Node, fully unit-tested |
 | `app/src/scene/` | Geometry builders, renderer, controls, gizmo, raycasting | Three.js |
 | `app/src/app/` | Central store (undo/redo/autosave), UI wiring, i18n, overlay | model + scene |
 | `app/src/export/` | PDF drawings, materials PDF, GLB/OBJ | model + jsPDF + Three.js |
@@ -166,12 +166,12 @@ flowchart LR
 
 | Decision | Rationale |
 |---|---|
-| **Single-file build** (`vite-plugin-singlefile`) | The whole app ships as one `index.html` — double-click distribution, trivial hosting, easy to share with non-technical users |
+| **Single-file build** (`vite-plugin-singlefile`) | The whole app ships as one `index.html`: double-click distribution, trivial hosting, easy to share with non-technical users |
 | **Params-driven geometry, never mesh scaling** | Non-uniform scale corrupts profiles on rotated pieces; rebuilding from params keeps every consumer (BOM, exports, labels) exact |
 | **jsPDF** for documents | Replaced a hand-rolled PDF writer that produced files some viewers rejected; battle-tested output |
-| **GLB in metres** | glTF's canonical unit — Blender imports 1:1 with names, colors and transparency preserved |
+| **GLB in metres** | glTF's canonical unit. Blender imports 1:1 with names, colors and transparency preserved |
 | **Hand-rolled i18n** (~180 keys) | Two languages don't justify an i18n framework; the model stores language-neutral keys, presentation translates |
-| **No framework** | Direct DOM with event delegation keeps the bundle lean and the UI honest — state lives in one store, rendering is explicit |
+| **No framework** | Direct DOM with event delegation keeps the bundle lean and the UI honest: state lives in one store, rendering is explicit |
 | **On-demand rendering** | The render loop compares a fingerprint of the scene state between frames and only redraws when something actually changed, instead of running at 60 fps in front of a motionless scene |
 | **Shared export renderer** | Every plans PDF used to open three WebGL contexts; browsers tolerate about sixteen, so repeated exports killed the main viewport's context. A single reused renderer removed the class of bug |
 
@@ -184,7 +184,7 @@ and i18n completeness (every key must exist in both languages with matching
 `{variables}`).
 
 Most of the rest are **regression tests, each written the day a real bug was
-found** — and each names the bug in its comment: materials that stayed opaque in
+found**, and each names the bug in its comment: materials that stayed opaque in
 the viewport while exporting correctly; hidden angle profiles that could still
 be clicked; mirrored L-profiles coming out wrong on one axis only; project files
 whose colors, parameters and coordinates reached the scene unvalidated.
@@ -192,7 +192,7 @@ whose colors, parameters and coordinates reached the scene unvalidated.
 **17 Playwright end-to-end tests** drive the real app in a real browser, which
 is the only way to reach what units cannot fake: WebGL contexts, raycasting
 against an actual camera, and the ~900 lines of UI wiring. They cover the two
-most expensive bugs found in review — repeated PDF exports exhausting the
+most expensive bugs found in review: repeated PDF exports exhausting the
 browser's WebGL contexts and freezing the viewport, and a render loop that
 redrew 60 times a second in front of a motionless scene.
 
@@ -214,7 +214,7 @@ built file.
 
 ## Internationalization
 
-Spanish and English, switchable live from the flag selector — no reload, design
+Spanish and English, switchable live from the flag selector, with no reload and the design
 untouched. The choice persists; first visit follows the browser language.
 **Exports speak the active language too** (drawings, BOM PDF, new piece names).
 Adding a language = one more column in
@@ -224,7 +224,7 @@ in [`landing/js/i18n.js`](landing/js/i18n.js).
 ## Project file format
 
 <details>
-<summary><code>.fmd</code> — plain JSON, version 3</summary>
+<summary><code>.fmd</code>: plain JSON, version 3</summary>
 
 ```jsonc
 {
@@ -253,7 +253,7 @@ in [`landing/js/i18n.js`](landing/js/i18n.js).
 ```
 
 Files from the original FerroMadera prototype (v2 format) are detected and
-migrated automatically — mesh scale factors are baked into real parameters.
+migrated automatically: mesh scale factors are baked into real parameters.
 
 </details>
 
@@ -280,17 +280,17 @@ migrated automatically — mesh scale factors are baked into real parameters.
 
 ## Limitations
 
-- **No parametric joints yet** — pieces do not know about each other, so moving a leg
+- **No parametric joints yet**: pieces do not know about each other, so moving a leg
   does not resize the bar spanning to it.
 - **No backend by design.** Being fully client-side is what makes distribution trivial,
   and also what rules out collaboration, project versioning and a shared catalog.
-- **The profile catalog is fixed in code** — a shop working with sections not included
+- **The profile catalog is fixed in code**: a shop working with sections not included
   cannot add them without editing the source.
 - **No DXF export**, so the cut list cannot feed a CNC plasma or laser table directly.
 
 ## Roadmap
 
-- [ ] **Parametric joints** — "this bar spans between these two legs": lengths
+- [ ] **Parametric joints**: "this bar spans between these two legs": lengths
       derived from anchors, updating when pieces move
 - [ ] Portuguese localization
 - [ ] DXF export for CNC plasma/laser tables
@@ -298,11 +298,11 @@ migrated automatically — mesh scale factors are baked into real parameters.
 
 ## License
 
-[GNU General Public License v3.0](LICENSE) — © 2026 Emilio Orellana.
+[GNU General Public License v3.0](LICENSE). © 2026 Emilio Orellana.
 
 You are free to use, study, modify and share this software. If you distribute it
-or a derivative — including hosting it, since the whole application is delivered
-to the browser — you must do so under the GPL v3 and make the source available.
+or a derivative, including hosting it since the whole application is delivered
+to the browser, you must do so under the GPL v3 and make the source available.
 
 Third-party components keep their own licenses: [Three.js](https://github.com/mrdoob/three.js)
 and [jsPDF](https://github.com/parallax/jsPDF) are MIT.
